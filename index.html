@@ -3,25 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>宁德时代 (300750.SZ) — DCF 估值模型</title>
+<title>宁德时代 300750 · 多维估值仪表盘</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
 <style>
 :root{--bg-primary:#0a0e17;--bg-secondary:#111827;--bg-card:#1a2332;--border:#2a3a50;--text-primary:#e8edf5;--text-secondary:#8899aa;--text-muted:#5a6a7a;--accent-blue:#3b82f6;--accent-cyan:#06b6d4;--accent-green:#10b981;--accent-amber:#f59e0b;--accent-red:#ef4444}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:linear-gradient(135deg,var(--bg-primary),var(--bg-secondary));color:var(--text-primary);min-height:100vh;line-height:1.6}
-.container{max-width:1400px;margin:0 auto;padding:20px}
-.header{text-align:center;padding:40px 20px;border-bottom:1px solid var(--border);margin-bottom:30px}
-.header h1{font-size:2.2em;font-weight:700;background:linear-gradient(135deg,var(--accent-blue),var(--accent-cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
-.header .subtitle{color:var(--text-secondary);font-size:1em}
-.price-badge{display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:8px 20px;border-radius:24px;font-size:1.1em;font-weight:600;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);color:var(--accent-blue)}
-.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:30px}
-.summary-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;transition:transform .2s,border-color .2s}
-.summary-card:hover{transform:translateY(-2px);border-color:var(--accent-blue)}
-.summary-card .label{font-size:.8em;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.summary-card .value{font-size:1.6em;font-weight:700}
-.summary-card .change{font-size:.85em;margin-top:4px}
-.up{color:var(--accent-green)}.down{color:var(--accent-red)}.neutral{color:var(--accent-blue)}
-.scenario-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:30px}
+.container{max-width:1480px;margin:0 auto;padding:20px}
+
+/* ===== 顶部标题栏 ===== */
+.header-bar{display:flex;justify-content:space-between;align-items:center;padding:24px 32px;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.header-bar h1{font-size:1.8em;font-weight:700;background:linear-gradient(135deg,var(--accent-blue),var(--accent-cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-meta{display:flex;align-items:center;gap:16px;font-size:.85em;color:var(--text-secondary)}
+.header-meta .update-time{color:var(--accent-green);font-weight:600}
+
+/* ===== KPI 卡片行 ===== */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s,box-shadow .2s}
+.kpi-card:hover{transform:translateY(-3px);border-color:var(--accent-blue);box-shadow:0 8px 30px rgba(59,130,246,.15)}
+.kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-card.green::after{background:var(--accent-green)}
+.kpi-card.blue::after{background:var(--accent-blue)}
+.kpi-card.cyan::after{background:var(--accent-cyan)}
+.kpi-card.amber::after{background:var(--accent-amber)}
+.kpi-card .kpi-label{font-size:.78em;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.kpi-card .kpi-value{font-size:1.7em;font-weight:700;line-height:1.2}
+.kpi-card .kpi-sub{font-size:.8em;margin-top:6px;color:var(--text-secondary)}
+.kpi-card .kpi-arrow{font-size:.75em;padding:2px 8px;border-radius:10px;font-weight:600}
+.arrow-up{color:var(--accent-green);background:rgba(16,185,129,.12)}
+.arrow-neutral{color:var(--accent-blue);background:rgba(59,130,246,.12)}
+.arrow-down{color:var(--accent-red);background:rgba(239,68,68,.12)}
+
+/* ===== 价格徽章 ===== */
+.price-badge-row{text-align:center;margin-bottom:24px}
+.price-badge{display:inline-flex;align-items:center;gap:10px;padding:10px 28px;border-radius:28px;font-size:1.15em;font-weight:700;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.35);color:var(--accent-blue)}
+
+/* ===== 情景卡片 ===== */
+.scenario-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:24px}
 .scenario-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:24px;position:relative;overflow:hidden}
 .scenario-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
 .scenario-card.bear::before{background:var(--accent-red)}
@@ -37,8 +56,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .scenario-card .assumps{margin-top:16px;font-size:.82em}
 .scenario-card .assumps div{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)}
 .scenario-card .assumps .pl{color:var(--text-secondary)}
+
+/* ===== 仪表条 Gauge ===== */
 .section{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:24px}
-.section h2{font-size:1.2em;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.section h2{font-size:1.15em;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.gauge-container{display:flex;flex-direction:column;align-items:center;padding:20px}
+.gauge-bar{width:100%;height:40px;border-radius:20px;background:linear-gradient(90deg,var(--accent-red) 0%,var(--accent-amber) 33%,var(--accent-green) 50%,var(--accent-amber) 67%,var(--accent-blue) 100%);position:relative;margin:16px 0}
+.gauge-marker{position:absolute;top:-8px;transform:translateX(-50%);font-size:.8em;font-weight:700}
+.gauge-marker::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);width:3px;height:12px;background:#fff;border-radius:2px}
+.gauge-labels{display:flex;justify-content:space-between;width:100%;font-size:.75em;color:var(--text-secondary)}
+.current-tag{background:rgba(255,255,255,.95);color:#111;padding:2px 12px;border-radius:10px;font-weight:700;font-size:.85em;position:absolute;top:44px;transform:translateX(-50%);white-space:nowrap}
+
+/* ===== 数据表格 ===== */
 .data-table{width:100%;border-collapse:collapse;font-size:.85em}
 .data-table th{text-align:left;padding:10px 12px;color:var(--text-secondary);font-weight:500;border-bottom:2px solid var(--border);white-space:nowrap}
 .data-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
@@ -46,6 +75,61 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .data-table .num{text-align:right;font-variant-numeric:tabular-nums}
 .data-table .hr td{font-weight:600;background:rgba(59,130,246,.08)}
 .positive{color:var(--accent-green)}.negative{color:var(--accent-red)}
+
+/* ===== 图表区域 ===== */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
+.chart-full{margin-bottom:24px}
+.chart-container{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:20px}
+.chart-container h3{font-size:1em;margin-bottom:16px;color:var(--text-secondary)}
+.chart-wrapper{position:relative;height:320px}  /* ★ 加高确保柱状图正常显示 */
+.chart-wrapper-tall{position:relative;height:380px}  /* ★ 更高给DCF情景柱状图 */
+
+/* ===== Tabs ===== */
+.tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--bg-secondary);padding:4px;border-radius:10px}
+.tab{flex:1;padding:10px 16px;text-align:center;border-radius:8px;cursor:pointer;font-size:.85em;font-weight:500;color:var(--text-secondary);transition:all .2s;border:none;background:transparent}
+.tab:hover{color:var(--text-primary)}
+.tab.active-bear{background:var(--accent-red);color:#fff}
+.tab.active-base{background:var(--accent-blue);color:#fff}
+.tab.active-bull{background:var(--accent-green);color:#fff}
+
+/* ===== WACC ===== */
+.wacc-buildup{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.wacc-formula{font-size:1.05em;padding:16px;background:rgba(59,130,246,.08);border-radius:12px;border:1px solid rgba(59,130,246,.15);font-family:'Courier New',monospace;line-height:2}
+.wf-var{color:var(--accent-cyan);font-weight:600}.wf-res{color:var(--accent-green);font-weight:700}
+
+/* ===== 风险网格 ===== */
+.risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:.85em}
+.risk-grid h4{margin-bottom:10px}
+.risk-grid li{color:var(--text-secondary);line-height:2}
+
+/* ===== 新增：信号灯仪表盘表格 ===== */
+.signal-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
+.signal-table{width:100%;border-collapse:collapse;font-size:.88em}
+.signal-table th{text-align:left;padding:12px 14px;color:var(--text-secondary);font-weight:500;border-bottom:2px solid var(--border);font-size:.78em;text-transform:uppercase;letter-spacing:.5px}
+.signal-table td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.signal-table tr:hover td{background:rgba(59,130,246,.04)}
+.signal-light{display:inline-flex;align-items:center;gap:8px}
+.light-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.light-dot.green{background:var(--accent-green);box-shadow:0 0 8px rgba(16,185,129,.6)}
+.light-dot.amber{background:var(--accent-amber);box-shadow:0 0 8px rgba(245,158,11,.6)}
+.light-dot.red{background:var(--accent-red);box-shadow:0 0 8px rgba(239,68,68,.6)}
+.signal-tag{padding:3px 10px;border-radius:12px;font-size:.78em;font-weight:600}
+.signal-tag.green{color:var(--accent-green);background:rgba(16,185,129,.12)}
+.signal-tag.amber{color:var(--accent-amber);background:rgba(245,158,11,.12)}
+.signal-tag.red{color:var(--accent-red);background:rgba(239,68,68,.12)}
+.signal-val{font-weight:700;font-size:1.05em}
+
+/* ===== 新增：底部假设参数栏 ===== */
+.assumptions-bar{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:18px 24px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;margin-bottom:24px}
+.assum-item{display:flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(59,130,246,.06);border-radius:8px;font-size:.85em}
+.assum-item .alabel{color:var(--text-secondary)}
+.assum-item .aval{font-weight:700;color:var(--accent-cyan)}
+
+/* ===== Footer ===== */
+.footer{text-align:center;padding:30px 20px;color:var(--text-muted);font-size:.8em;border-top:1px solid var(--border);margin-top:30px}
+.update-note{text-align:center;padding:12px 20px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:12px;margin-bottom:24px;font-size:.85em;color:var(--accent-green)}
+
+/* ===== 热力图 ===== */
 .heatmap-container{overflow-x:auto}
 .heatmap{border-collapse:collapse;margin:0 auto}
 .heatmap td,.heatmap th{padding:10px 14px;text-align:center;font-size:.82em;border:1px solid rgba(255,255,255,.06)}
@@ -55,62 +139,97 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .heatmap .cell{font-weight:600;cursor:pointer;transition:transform .1s;min-width:80px}
 .heatmap .cell:hover{transform:scale(1.05)}
 .heatmap .bc{outline:2px solid var(--accent-blue);outline-offset:-2px}
-.wacc-buildup{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
-.wacc-formula{font-size:1.05em;padding:16px;background:rgba(59,130,246,.08);border-radius:12px;border:1px solid rgba(59,130,246,.15);font-family:'Courier New',monospace;line-height:2}
-.wf-var{color:var(--accent-cyan);font-weight:600}.wf-res{color:var(--accent-green);font-weight:700}
-.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
-.chart-container{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:20px}
-.chart-container h3{font-size:1em;margin-bottom:16px;color:var(--text-secondary)}
-.chart-wrapper{position:relative;height:300px}
-.tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--bg-secondary);padding:4px;border-radius:10px}
-.tab{flex:1;padding:10px 16px;text-align:center;border-radius:8px;cursor:pointer;font-size:.85em;font-weight:500;color:var(--text-secondary);transition:all .2s;border:none;background:transparent}
-.tab:hover{color:var(--text-primary)}
-.tab.active-bear{background:var(--accent-red);color:#fff}
-.tab.active-base{background:var(--accent-blue);color:#fff}
-.tab.active-bull{background:var(--accent-green);color:#fff}
-.gauge-container{display:flex;flex-direction:column;align-items:center;padding:20px}
-.gauge-bar{width:100%;height:40px;border-radius:20px;background:linear-gradient(90deg,var(--accent-red) 0%,var(--accent-amber) 33%,var(--accent-green) 50%,var(--accent-amber) 67%,var(--accent-blue) 100%);position:relative;margin:16px 0}
-.gauge-marker{position:absolute;top:-8px;transform:translateX(-50%);font-size:.8em;font-weight:700}
-.gauge-marker::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);width:3px;height:12px;background:#fff;border-radius:2px}
-.gauge-labels{display:flex;justify-content:space-between;width:100%;font-size:.75em;color:var(--text-secondary)}
-.current-tag{background:rgba(255,255,255,.9);color:#111;padding:2px 10px;border-radius:10px;font-weight:700;font-size:.85em;position:absolute;top:44px;transform:translateX(-50%);white-space:nowrap}
-.risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:.85em}
-.risk-grid h4{margin-bottom:10px}
-.risk-grid li{color:var(--text-secondary);line-height:2}
-.footer{text-align:center;padding:30px 20px;color:var(--text-muted);font-size:.8em;border-top:1px solid var(--border);margin-top:40px}
-.update-note{text-align:center;padding:12px 20px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:12px;margin-bottom:24px;font-size:.85em;color:var(--accent-green)}
+
+/* ===== DCF 底价强调样式 ===== */
+.dcf-safety-highlight{background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(16,185,129,.05));border:1px solid rgba(16,185,129,.4);border-radius:12px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:16px}
+.dcf-safety-icon{font-size:2em;flex-shrink:0}
+.dcf-safety-text h4{color:var(--accent-green);font-size:1em;margin-bottom:4px}
+.dcf-safety-text p{color:var(--text-secondary);font-size:.85em}
+.dcf-safety-value{font-size:1.8em;font-weight:700;color:var(--accent-green);flex-shrink:0}
+
 ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:var(--bg-primary)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
-@media(max-width:900px){.scenario-grid{grid-template-columns:1fr}.chart-row{grid-template-columns:1fr}.wacc-buildup{grid-template-columns:1fr}.risk-grid{grid-template-columns:1fr}.summary-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:600px){.summary-grid{grid-template-columns:1fr}.container{padding:12px}}
+
+@media(max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+  .signal-grid{grid-template-columns:1fr}
+  .chart-row{grid-template-columns:1fr}
+  .wacc-buildup{grid-template-columns:1fr}
+  .risk-grid{grid-template-columns:1fr}
+}
+@media(max-width:768px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .scenario-grid{grid-template-columns:1fr}
+  .header-bar{flex-direction column;text-align:center}
+  .header-meta{justify-content:center}
+  .container{padding:12px}
+  .chart-wrapper,.chart-wrapper-tall{height:260px}
+}
+@media(max-width:480px){.kpi-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="container">
 
-<div class="header">
-  <h1>宁德时代 (300750.SZ) DCF 估值模型</h1>
-  <div class="subtitle">Bear / Base / Bull 三种情景分析 · 锂电 + 储能需求驱动</div>
+<!-- ========== 顶部标题栏 ========== -->
+<div class="header-bar">
+  <h1>📊 宁德时代 300750 · 多维估值仪表盘</h1>
+  <div class="header-meta">
+    <span>数据截至：<span class="update-time">2026年4月13日</span></span>
+    <span>· 来源：公司公告 / 分析师一致预期</span>
+    <span>· 不复权股价</span>
+  </div>
+</div>
+
+<!-- ========== 核心KPI卡片行（新增维度）========== -->
+<div class="kpi-grid" id="kpiGrid"></div>
+
+<!-- ========== 价格徽章 ========== -->
+<div class="price-badge-row">
   <div class="price-badge" id="priceBadge">加载中...</div>
 </div>
 
-<div class="update-note" id="updateNote">&#128308; 数据更新时间：2026年4月13日 · 每周更新</div>
-
-<div class="summary-grid" id="summaryGrid"></div>
+<!-- ========== 原有：情景卡片 ========== -->
 <div class="scenario-grid" id="scenarioGrid"></div>
 
+<!-- ========== 新增：DCF底价安全垫强调（绿色） ========== -->
+<div class="dcf-safety-highlight" id="safetyHighlight"></div>
+
+<!-- ========== 原有：估值区间分布(Gauge) ========== -->
 <div class="section">
-  <h2>&#128202; 估值区间分布</h2>
+  <h2>📏 估值区间分布</h2>
   <div class="gauge-container">
     <div class="gauge-bar" id="gaugeBar"></div>
     <div class="gauge-labels"><span id="gMin"></span><span>Bear</span><span>Base</span><span>Bull</span><span id="gMax"></span></div>
   </div>
 </div>
 
+<!-- ========== 新增：双列图表区（上：DCF情景柱状图 | 下：相对估值对比）========== -->
+<div class="chart-row">
+  <!-- 左：DCF估值情景分析柱状图（新增） -->
+  <div class="chart-container">
+    <h3>📊 DCF 估值情景分析（企业价值 · 万亿元）</h3>
+    <div class="chart-wrapper-tall" id="dcfScenarioChart"></div>
+  </div>
+  <!-- 右：相对估值对比条形图（新增） -->
+  <div class="chart-container">
+    <h3>⚖️ 相对估值对比（PE倍数）</h3>
+    <div class="chart-wrapper" id="relativeValChart"></div>
+  </div>
+</div>
+
+<!-- ========== 新增：信号灯仪表盘表格 ========== -->
 <div class="section">
-  <h2>&#128203; 历史财务数据 (2020A &#x2014; 2025A)</h2>
+  <h2>🚦 投资信号灯仪表盘</h2>
+  <div class="signal-grid" id="signalGrid"></div>
+</div>
+
+<!-- ========== 原有：历史财务数据 ========== -->
+<div class="section">
+  <h2>📋 历史财务数据 (2020A — 2025A)</h2>
   <div style="overflow-x:auto"><table class="data-table" id="histTable"></table></div>
 </div>
 
+<!-- ========== 原有：Chart.js 图表 × 4 ========== -->
 <div class="chart-row">
   <div class="chart-container"><h3>营业收入与净利润趋势</h3><div class="chart-wrapper"><canvas id="chart1"></canvas></div></div>
   <div class="chart-container"><h3>利润率变化趋势</h3><div class="chart-wrapper"><canvas id="chart2"></canvas></div></div>
@@ -120,88 +239,98 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
   <div class="chart-container"><h3>资本结构 (有息负债 vs 现金)</h3><div class="chart-wrapper"><canvas id="chart4"></canvas></div></div>
 </div>
 
+<!-- ========== 原有：WACC计算 ========== -->
 <div class="section">
-  <h2>&#128295; WACC 计算 (加权平均资本成本)</h2>
+  <h2>🔧 WACC 计算 (加权平均资本成本)</h2>
   <div class="wacc-buildup">
     <div><table class="data-table" id="waccTable"></table></div>
     <div>
       <div class="wacc-formula" id="waccFormula"></div>
       <div style="margin-top:16px;font-size:.82em;color:var(--text-secondary);line-height:1.8">
-        <p><strong>&#35774;&#26126;</strong></p>
-        <p>&#8226; &#26080;&#39118;&#38505;&#21033;&#29575; = 10&#24180;&#26399;&#20013;&#22269;&#22269&#20594;&#25910;&#30410;&#29575; 1.82% (2026/4/13)</p>
-        <p>&#8226; Beta = 1.10&#65292;CATL&#30456;&#23545;&#27915;&#28145;30340;&#31995;&#32479;&#24615;&#39118;&#38505;</p>
-        <p>&#8226; &#32988;&#26435;&#39118;&#38505;&#28287;&#20215; = 6.0%&#65292;A&#32946;&#24066;&#22330;&#38271;&#26399;&#22343;&#20540;</p>
-        <p>&#8226; CATL&#20026;&#20928;&#29616;&#37329;&#20844;&#21496;&#65288;&#29616;&#37329;&#36828;&#36234;&#26377;&#24694;&#36127;&#20541;&#65289;&#65292;WACC&#25509;&#36817;&#31911;&#32988;&#26435;&#25104;&#26412;</p>
-        <p>&#8226; &#39640;&#26032;&#25216;&#19994;&#20225;&#19994;&#20248;&#24687;&#31246;&#29575; 15%</p>
+        <p><strong>说明</strong></p>
+        <p>&#8226; 无风险利率 = 10年期中国国债收益率 1.82% (2026/4/13)</p>
+        <p>&#8226; Beta = 1.10，CATL相对沪深300的系统性风险</p>
+        <p>&#8226; 股权风险溢价 = 6.0%，A股市场长期均值</p>
+        <p>&#8226; CATL为净现金公司（现金远超有息负债），WACC接近股权成本</p>
+        <p>&#8226; 高新技术企业优惠税率 15%</p>
       </div>
     </div>
   </div>
 </div>
 
+<!-- ========== 原有：五年预测 ========== -->
 <div class="section">
-  <h2>&#128200; &#20116;&#24180;&#39044;&#27979; (2026E &#x2014; 2030E)</h2>
+  <h2>🔮 五年预测 (2026E — 2030E)</h2>
   <div class="tabs">
-    <button class="tab" id="tabBear" onclick="switchTab('bear')">&#128058; Bear &#24749;&#35266;</button>
-    <button class="tab active-base" id="tabBase" onclick="switchTab('base')">&#128202; Base &#22522;&#20934;</button>
-    <button class="tab" id="tabBull" onclick="switchTab('bull')">&#128008; Bull &#20048;&#35266;</button>
+    <button class="tab" id="tabBear" onclick="switchTab('bear')">🐻 Bear 悲观</button>
+    <button class="tab active-base" id="tabBase" onclick="switchTab('base')">📊 Base 基准</button>
+    <button class="tab" id="tabBull" onclick="switchTab('bull')">🐂 Bull 乐观</button>
   </div>
   <div style="overflow-x:auto"><table class="data-table" id="projTable"></table></div>
-  <div style="margin-top:20px"><div class="chart-container" style="border:none;padding:0"><h3>&#19977;&#31181;&#24773;&#26223;&#39044;&#27979; FCF &#23545;&#27604;</h3><div class="chart-wrapper"><canvas id="chart5"></canvas></div></div></div>
+  <div style="margin-top:20px"><div class="chart-container" style="border:none;padding:0"><h3>三种情景预测 FCF 对比</h3><div class="chart-wrapper"><canvas id="chart5"></canvas></div></div></div>
 </div>
 
+<!-- ========== 原有：DCF汇总表 ========== -->
 <div class="section">
-  <h2>&#128142; DCF &#20272;&#20540;&#27719;&#24635;</h2>
+  <h2>💰 DCF 估值汇总</h2>
   <div style="overflow-x:auto"><table class="data-table" id="dcfSummary"></table></div>
 </div>
 
+<!-- ========== 原有：敏感性热力图 × 2 ========== -->
 <div class="section">
-  <h2>&#127919; &#25935;&#24863;&#24615;&#20998;&#26597; 1&#65306;WACC &#215; &#27744;&#32493;&#22686;&#38271;&#29575; (Base Case &#27599;&#26522;&#20272;&#20540;)</h2>
-<p style="font-size:.82em;color:var(--text-secondary);margin-bottom:16px">&#19981;&#21516; WACC &#21644;&#27744;&#32493;&#22686;&#38271;&#29575;&#32452;&#21512;&#23545;&#24212;&#30340;&#20271;&#20798;&#20215;&#20540;&#12290;&#39068;&#33394;&#21453;&#26144;&#30456;&#23545;&#24403;&#21069;&#20215 &#165;416 &#30340;&#20559;&#31163;&#31243;&#24230;&#12290;&#34013;&#26694; = Base Case&#12290;</p>
+  <h2>🔬 敏感性分查 1：WACC × 池续增长率 (Base Case 每股估值)</h2>
+<p style="font-size:.82em;color:var(--text-secondary);margin-bottom:16px">不同 WACC 和永续增长率组合对应的每股价值。颜色反映相对当前价 ¥416 的偏离程度。蓝框 = Base Case。</p>
   <div class="heatmap-container" id="sens1"></div>
 </div>
 
 <div class="section">
-  <h2>&#127919; &#25935;&#24863;&#24615;&#20998;&#26597; 2&#65306;&#33644;&#25910; CAGR &#215; &#27744;&#32493;&#22686;&#38271;&#29575; (Base Case &#27599;&#26522;&#20272;&#20540;)</h2>
-<p style="font-size:.82em;color:var(--text-secondary);margin-bottom:16px">&#19981;&#21516;&#33644;&#25910;&#22686;&#38271;&#20572;&#24494;&#19982;&#27744;&#32493;&#22686;&#38271;&#29575;&#32452;&#21512;&#19979;&#30340;&#27599;&#26522;&#20271;&#20540;&#12290;</p>
+  <h2>🔬 敏感性分查 2：营收 CAGR × 池续增长率 (Base Case 每股估值)</h2>
+<p style="font-size:.82em;color:var(--text-secondary);margin-bottom:16px">不同营收增长停歇与永续增长率组合下的每股估值。</p>
   <div class="heatmap-container" id="sens2"></div>
 </div>
 
+<!-- ========== 原有：风险因素 ========== -->
 <div class="section">
-  <h2>&#9888;&#65039; &#20851;&#38190;&#20572;&#35774;&#19982;&#39118;&#38505;&#22240;&#32032;</h2>
+  <h2>⚠️ 关键停设与风险因素</h2>
   <div class="risk-grid">
     <div>
-      <h4 style="color:var(--accent-green)">&#128273; &#20851;&#38190;&#20572;&#35774;</h4>
+      <h4 style="color:var(--accent-green)">🔑 关键停设</h4>
       <ul style="padding-left:20px">
-        <li>&#20840;&#29699;&#21160;&#21147;&#30005;&#27744;&#38656;&#27714;&#32500;&#25345;&#22686;&#38271; (Base: &#24180;&#22343;25%)</li>
-        <li>&#20648;&#33021;&#24066;&#22330;&#21152;&#36895;&#28192;&#36879; (CAGR 30%+)</li>
-        <li>CATL &#32500;&#25345; 35%+ &#20840;&#29695;&#24066;&#21344;&#29575;</li>
-        <li>&#38067;&#20215;&#20202;&#31283;&#65292;&#30005;&#27744;&#25104;&#26412;&#32531;&#28287;&#38477;</li>
-        <li>&#25216;&#26415;&#20195;&#20195;&#65288;&#31070;&#34892;/&#40857;&#40092;/&#20957;&#32819;&#24577;&#65289;&#25345;&#32493;&#39064;&#20808;</li>
-        <li>&&#28023;&#22806;&#20135;&#33021;&#25193;&#24347;&#39034;&#21033;&#65288&#21246;&#29226;&#21033;/&#24503;&#22269;/&#21360;&#23612;&#65289;</li>
-        <li>&#26377;&#25928;&#31246;&#29575;&#32500;&#25345; 15%(&#39640;&#26032;&#25216;&#19994;&#20225;&#19994;)</li>
+        <li>全球动力电池需求维持增长 (Base: 年均25%)</li>
+        <li>储能市场加速渗透 (CAGR 30%+)</li>
+        <li>CATL 维持 35%+ 全球市占率</li>
+        <li>锂价趋稳，电池成本缓降</li>
+        <li>技术代代领先（神行/龙骧/凝聚态）持续领先</li>
+        <li>海外产能扩张顺利（匈牙利/德国/印尼）</li>
+        <li>有效税率维持 15%(高新技术企业)</li>
       </ul>
     </div>
     <div>
-      <h4 style="color:var(--accent-red)">&#9888;&#65039; &#20027;&#35201;&#39118;&#38505;</h4>
+      <h4 style="color:var(--accent-red)">⚠️ 主要风险</h4>
       <ul style="padding-left:20px">
-        <li>&#22320;&#32536;&#25919;&#27835;&#65306;&#27431;&#32654;&#30005;&#27744;&#27861;&#26696;&#38480;&#21046;</li>
-        <li>&#38067;&#20215;&#28988;&#28818;&#28010;&#21160;&#24433;&#21033;&#28070;&#29575;</li>
-        <li>&#34892;&#19994;&#20135;&#33021;&#36807;&#30097;&#23548;&#33268;&#20215;&#25112;&#21152;&#21091;</li>
-        <li>&#22278;&#24577;&#30005;&#27744;&#31561;&#26032;&#25216;&#26415;&#36335;&#32447;&#39064;&#36798;&#39118;&#38505;</li>
-        <li>&#20108;&#32447;&#21830;&#65288;&#27604;&#20122;&#36731;/&#20013;&#26032;&#33021;&#31561;&#65289;&#31454;&#20105;&#21152&#21091;</li>
-        <li>&#28023;&#22806;&#24314;&#21402;&#25104;&#26412;&#36229;&#39044;&#26399;</li>
-        <li>&#22823;&#39069;&#36164;&#26412;&#24320;&#25903;&#23548;&#33268;&#33258;&#30001;&#29616;&#37329;&#27942;&#21387;</li>
+        <li>地缘政治：欧美电池法案限制</li>
+        <li>锂价格剧烈波动影响利润率</li>
+        <li>行业产能过剩导致价格战加剧</li>
+        <li>固态电池等新技术路线颠覆风险</li>
+        <li>二线商（比亚迪/中能等）竞争加剧</li>
+        <li>海外建厚成本超预期</li>
+        <li>大额资本开支导致自由现金流承压</li>
       </ul>
     </div>
   </div>
 </div>
 
+<!-- ========== 新增：底部DCF关键假设参数速览 ========== -->
+<div class="assumptions-bar" id="assumptionsBar"></div>
+
+<!-- ========== Footer ========== -->
 <div class="footer">
-  <p>&#128202; 宁德时代 DCF 估值模型 · 估值数据基于模型假设，不构成投资建议</p>
+  <p>📊 宁德时代多维估值仪表盘 · 估值数据基于模型假设，不构成投资建议</p>
   <p style="margin-top:4px">Repository: <a href="https://github.com/zxb20262026/catl-dcf-valuation" style="color:var(--accent-blue)">github.com/zxb20262026/catl-dcf-valuation</a></p>
 </div>
 
 </div>
+
 
 <script>
 // ============================================================
@@ -210,6 +339,36 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 var CP = 416; // 不复权当前股价 (元)
 var SHARES = 44.0; // 总股本 (亿股)
 
+// ---- 新增：KPI 数据集 ----
+var KPI = {
+  pe_ttm: 26.30,
+  roe_2025: 24.72,
+  ocf: 1332,
+  ocf_yoy: 37.35,
+  mkt_share_global: 39.2,
+  mkt_share_years: 9,
+  cash_reserve: 3925
+};
+
+// ---- 新增：相对估值数据 ----
+var REL_VAL = {
+  pe_current: 26.3,
+  pe_target_2026e: 30.0,
+  pe_industry_avg: 22.0,
+  pe_hist_high: 55.0,
+  pe_hist_low: 18.0
+};
+
+// ---- 新增：信号灯数据 ----
+var SIGNALS = [
+  { dim: '盈利质量', metric: 'ROE', value: '24.72%', detail: '2025年度', status: 'green', tag: '优秀' },
+  { dim: '成长性', metric: '电池销量', value: '661 GWh', detail: 'YoY +39%', status: 'green', tag: '高增长' },
+  { dim: '现金流', metric: '经营性OCF', value: '1332亿', detail: 'YoY +37.4%', status: 'green', tag: '充沛' },
+  { dim: '估值水平', metric: 'A股远期PE(2026E)', value: '~18倍', detail: '低于历史中枢', status: 'green', tag: '偏低' },
+  { dim: '竞争地位', metric: 'Q1国内市占率', value: '50.1%', detail: '重返50%', status: 'green', tag: '领先' },
+  { dim: '风险因素', metric: '碳酸锂价格敏感度', value: '中等偏高', detail: '利润弹性较大', status: 'amber', tag: '需关注' }
+];
+
 // 历史财务数据 (亿元)
 var H = {
   y: ['2020A','2021A','2022A','2023A','2024A','2025A'],
@@ -217,10 +376,10 @@ var H = {
   gp: [115, 325, 732, 915, 836, 1110],
   op: [62, 125, 268, 445, 510, 770],
   np: [55.8, 159.3, 307.3, 441.3, 507.2, 722.0],
-  ocf: [72, 350, 620, 728, 970, 1100],
+  ocf: [72, 350, 620, 728, 970, 1332],   // ★ 更新为最新OCF=1332
   capex: [80, 200, 500, 380, 350, 400],
   debt: [350, 520, 900, 850, 800, 750],
-  cash: [450, 800, 1500, 2100, 2300, 2500]
+  cash: [450, 800, 1500, 2100, 3925, 3925]  // ★ 更新货币资金为3925
 };
 H.gm = H.gp.map(function(g,i){return g/H.rev[i]*100});
 H.om = H.op.map(function(o,i){return o/H.rev[i]*100});
@@ -244,7 +403,7 @@ var SC = {
     em: [0.13, 0.125, 0.12, 0.115, 0.11],
     tax: 0.25, da: 0.055,
     cxr: [0.17, 0.15, 0.14, 0.13, 0.12],
-    nwc: 0.20, tg: 0.015, wacc: 0.095
+    nwc: 0.20, tg: 0.0, wacc: 0.095     // ★ tg改为0（极端零增长）
   },
   base: {
     name: 'Base \u57FA\u51C6', emoji: '\uD83D\uDCCA',
@@ -253,7 +412,7 @@ var SC = {
     em: [0.165, 0.17, 0.175, 0.175, 0.175],
     tax: 0.15, da: 0.05,
     cxr: [0.16, 0.15, 0.14, 0.13, 0.12],
-    nwc: 0.15, tg: 0.025, wacc: 0.0842
+    nwc: 0.15, tg: 0.01, wacc: 0.0842   // ★ 中性tg=1%
   },
   bull: {
     name: 'Bull \u4E50\u89C2', emoji: '\uD83D\uDC02',
@@ -262,7 +421,7 @@ var SC = {
     em: [0.175, 0.18, 0.185, 0.19, 0.19],
     tax: 0.15, da: 0.048,
     cxr: [0.14, 0.13, 0.12, 0.11, 0.10],
-    nwc: 0.12, tg: 0.030, wacc: 0.08
+    nwc: 0.12, tg: 0.03, wacc: 0.08
   }
 };
 
@@ -271,7 +430,7 @@ var SC = {
 // ============================================================
 function dcf(k) {
   var s = SC[k];
-  var bR = H.rev[5]; // 2025A 营收基数
+  var bR = H.rev[5];
   var rev = [], ebit = [], nopat = [], da = [], cx = [], dnwc = [], fcf = [], pv = [];
   var r = bR;
   
@@ -296,8 +455,14 @@ function dcf(k) {
   }
   
   var spv = pv.reduce(function(a,b){return a+b;}, 0);
-  var tv = Math.round(fcf[4] * (1 + s.tg) / (s.wacc - s.tg));
-  var pvt = Math.round(tv / Math.pow(1 + s.wacc, 5));
+  // ★ 特殊处理零增长：当tg=0时终值公式用年金化
+  var tv, pvt;
+  if (s.tg === 0) {
+    tv = Math.round(fcf[4] / s.wacc);
+  } else {
+    tv = Math.round(fcf[4] * (1 + s.tg) / (s.wacc - s.tg));
+  }
+  pvt = Math.round(tv / Math.pow(1 + s.wacc, 5));
   var ev = spv + pvt;
   var eq = ev - H.nd[5];
   var ps = Math.round(eq / SHARES * 100) / 100;
@@ -312,20 +477,245 @@ function dcf(k) {
   };
 }
 
+
 // ============================================================
-// 渲染函数
+// 【新增】渲染函数
+// ============================================================
+
+// ---- KPI 卡片行 ----
+function renderKPI() {
+  document.getElementById('kpiGrid').innerHTML =
+    '<div class="kpi-card green">' +
+      '<div class="kpi-label">📈 A股 PE (TTM)</div>' +
+      '<div class="kpi-value">' + KPI.pe_ttm.toFixed(2) + ' <span style="font-size:.5em;color:var(--text-secondary)">倍</span></div>' +
+      '<div class="kpi-sub"><span class="kpi-arrow arrow-up">↑ 中等偏低</span> 历史中枢 ~35x</div>' +
+    '</div>' +
+    '<div class="kpi-card green">' +
+      '<div class="kpi-label">💪 2025 ROE</div>' +
+      '<div class="kpi-value">' + KPI.roe_2025.toFixed(2) + '<span style="font-size:.5em;color:var(--text-secondary)"> %</span></div>' +
+      '<div class="kpi-sub"><span class="kpi-arrow arrow-up">优秀</span> 净利率提升驱动</div>' +
+    '</div>' +
+    '<div class="kpi-card cyan">' +
+      '<div class="kpi-label">🌊 经营现金流</div>' +
+      '<div class="kpi-value">' + KPI.ocf.toLocaleString() + ' <span style="font-size:.5em;color:var(--text-secondary)">亿元</span></div>' +
+      '<div class="kpi-sub"><span class="kpi-arrow arrow-up">+' + KPI.ocf_yoy + '%</span> YoY 同比</div>' +
+    '</div>' +
+    '<div class="kpi-card blue">' +
+      '<div class="kpi-label">🌍 全球动力电池市占率</div>' +
+      '<div class="kpi-value">' + KPI.mkt_share_global + '<span style="font-size:.5em;color:var(--text-secondary)"> %</span></div>' +
+      '<div class="kpi-sub"><span class="kpi-arrow arrow-neutral">连续' + KPI.mkt_share_years + '年第一</span> SNE Research</div>' +
+    '</div>' +
+    '<div class="kpi-card amber">' +
+      '<div class="kpi-label">🏦 货币资金储备</div>' +
+      '<div class="kpi-value">' + KPI.cash_reserve.toLocaleString() + ' <span style="font-size:.5em;color:var(--text-secondary)">亿元</span></div>' +
+      '<div class="kpi-sub"><span class="kpi-arrow arrow-neutral">安全垫充足</span> 远超有息负债</div>' +
+    '</div>';
+}
+
+// ---- DCF 底价安全垫强调区域（绿色突出显示） ----
+function renderSafetyHighlight() {
+  var bearDcf = dcf('bear');
+  var bearEvTrillion = (bearDcf.ev / 10000).toFixed(1);
+  var bearPrice = bearDcf.ps.toFixed(0);
+  
+  document.getElementById('safetyHighlight').innerHTML =
+    '<div class="dcf-safety-icon">🛡️</div>' +
+    '<div class="dcf-safety-text">' +
+      '<h4>极端零增长 DCF 底价 · 估值安全垫</h4>' +
+      '<p>即使假设营收零增长（永续增长率 g=0%），CATL 的企业内在价值仍有约 <strong>' + bearEvTrillion + ' 万亿元</strong>，对应每股约 <strong>¥' + bearPrice + '</strong>。这是估值的"铁底"，代表最差情况下的清算价值底线。</p>' +
+    '</div>' +
+    '<div class="dcf-safety-value">' + bearEvTrillion + '万亿<br><span style="font-size:.4em;color:var(--text-secondary)">企业价值</span></div>';
+}
+
+// ---- DCF 情景分析柱状图（ECharts） ----
+function renderDcfScenarioChart() {
+  var bearDcf = dcf('bear');
+  var baseDcf = dcf('base');
+  var bullDcf = dcf('bull');
+  var currentMktCapTrillion = (CP * SHARES / 10000).toFixed(2);
+
+  var chartDom = document.getElementById('dcfScenarioChart');
+  var myChart = echarts.init(chartDom);
+
+  var option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(26,35,50,.95)',
+      borderColor: '#2a3a50',
+      textStyle: { color: '#e8edf5', fontSize: 13 },
+      formatter: function(params) {
+        var item = params[0];
+        if (item.seriesName === '当前市值') {
+          return '<b>' + item.name + '</b><br/>当前市值：<b style="color:#ef4444">' + item.value + '</b> 万亿元';
+        }
+        return '<b>' + item.name + '</b><br/>' + item.seriesName + '：<b style="color:' + item.color + '">' + item.value + '</b> 万亿元';
+      }
+    },
+    grid: { left: '12%', right: '8%', top: '12%', bottom: '15%' },
+    xAxis: {
+      type: 'category',
+      data: ['\u60B2\u89C2 (\u96F6\u589E\u957F g=0%)', '\u57FA\u51C6 (\u6C38\u7EED g=1%)', '\u4E50\u89C2 (\u6C38\u7EED g=3%)'],
+      axisLine: { lineStyle: { color: '#2a3a50' } },
+      axisLabel: { color: '#8899aa', fontSize: 12, interval: 0 },
+      axisTick: { show: false }
+    },
+    yAxis: {
+      type: 'value',
+      name: '万亿元',
+      nameTextStyle: { color: '#8899aa', fontSize: 11 },
+      axisLine: { show: true, lineStyle: { color: '#2a3a50' } },
+      axisLabel: { color: '#8899aa', fontSize: 11 },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,.04)' } }
+    },
+    series: [
+      {
+        name: 'DCF 企业价值',
+        type: 'bar',
+        data: [
+          { 
+            value: parseFloat((bearDcf.ev / 10000).toFixed(1)), 
+            itemStyle: { 
+              color: { type: 'linear', x: 0, y: 0, x2: 0, y2:1, colorStops: [{offset:0,color:'#059669'}, {offset:1,color:'#10b981'}] }, 
+              borderRadius: [6, 6, 0, 0] 
+            } 
+          },
+          { 
+            value: parseFloat((baseDcf.ev / 10000).toFixed(1)), 
+            itemStyle: { color: '#3b82f6', borderRadius: [6, 6, 0, 0] } 
+          },
+          { 
+            value: parseFloat((bullDcf.ev / 10000).toFixed(1)), 
+            itemStyle: { color: '#06b6d4', borderRadius: [6, 6, 0, 0] } 
+          }
+        ],
+        barWidth: '45%',
+        label: {
+          show: true, position: 'top', color: '#e8edf5', fontWeight: 700, fontSize: 14,
+          formatter: '{c} 万亿'
+        },
+        emphasis: { itemStyle: { shadowBlur: 15, shadowColor: 'rgba(0,0,0,.3)' } }
+      },
+      {
+        name: '当前市值',
+        type: 'line',
+        data: [parseFloat(currentMktCapTrillion), parseFloat(currentMktCapTrillion), parseFloat(currentMktCapTrillion)],
+        lineStyle: { color: '#ef4444', type: 'dashed', width: 2.5 },
+        symbol: 'none',
+        markPoint: {
+          symbol: 'rect',
+          symbolSize: [80, 24],
+          label: { show: true, formatter:'\u5F53\u524D\u5E02\u503C', color:'#ef4444', fontSize:11, fontWeight:700 },
+          itemStyle: { color: 'rgba(239,68,68,.15)', borderColor:'#ef4444', borderWidth: 1 },
+          data: [{ coord: [1, parseFloat(currentMktCapTrillion)], x: '95%' }]
+        },
+        tooltip: { show: false }
+      }
+    ]
+  };
+  myChart.setOption(option);
+  window.addEventListener('resize', function(){ myChart.resize(); });
+}
+
+// ---- 相对估值对比图（ECharts） ----
+function renderRelativeValChart() {
+  var chartDom = document.getElementById('relativeValChart');
+  var myChart = echarts.init(chartDom);
+
+  var option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: 'rgba(26,35,50,.95)',
+      borderColor: '#2a3a50',
+      textStyle: { color: '#e8edf5', fontSize: 13 }
+    },
+    grid: { left: '12%', right: '8%', top: '12%', bottom: '20%' },
+    xAxis: {
+      type: 'value',
+      name: 'PE (倍)',
+      nameTextStyle: { color: '#8899aa', fontSize: 11 },
+      max: 65,
+      axisLine: { lineStyle: { color: '#2a3a50' } },
+      axisLabel: { color: '#8899aa', fontSize: 11 },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,.04)' } }
+    },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: ['\u5386\u53F2\u6700\u4F4E PE', '\u884C\u4E1A\u5E73\u5747 PE', '\u5F53\u524D PE (TTM)', '2026E \u5206\u6790\u5E08\u76EE\u6807 PE', '\u5386\u53F2\u6700\u9AD8 PE'],
+      axisLine: { lineStyle: { color: '#2a3a50' } },
+      axisLabel: { color: '#e8edf5', fontSize: 11 },
+      axisTick: { show: false }
+    },
+    series: [{
+      type: 'bar',
+      data: [
+        { value: REL_VAL.pe_hist_low, itemStyle: { color: '#10b981', borderRadius: [0, 4, 4, 0] } },
+        { value: REL_VAL.pe_industry_avg, itemStyle: { color: '#6366f1', borderRadius: [0, 4, 4, 0] } },
+        { value: REL_VAL.pe_current, itemStyle: { color: '#3b82f6', borderRadius: [0, 4, 4, 0] } },
+        { value: REL_VAL.pe_target_2026e, itemStyle: { color: '#f59e0b', borderRadius: [0, 4, 4, 0] } },
+        { value: REL_VAL.pe_hist_high, itemStyle: { color: '#ef4444', borderRadius: [0, 4, 4, 0] } }
+      ],
+      barWidth: '50%',
+      label: { show: true, position: 'right', color: '#e8edf5', fontWeight: 600, fontSize: 12, formatter: '{c}x' },
+      emphasis: { itemStyle: { shadowBlur: 12, shadowColor: 'rgba(0,0,0,.3)' } }
+    }],
+    markLine: {
+      silent: true,
+      lineStyle: { color: '#3b82f6', type: 'solid', width: 2 },
+      data: [[{ coord: [REL_VAL.pe_current, 2] }, { coord: [REL_VAL.pe_current, -1] }]],
+      label: { show: false }
+    }
+  };
+  myChart.setOption(option);
+  window.addEventListener('resize', function(){ myChart.resize(); });
+}
+
+// ---- 信号灯仪表盘表格 ----
+function renderSignalGrid() {
+  var html =
+    '<table class="signal-table">' +
+    '<thead><tr><th>维度</th><th>指标</th><th>数值</th><th>备注</th><th>状态</th></tr></thead><tbody>';
+  
+  SIGNALS.forEach(function(s) {
+    html += '<tr>' +
+      '<td style="font-weight:600">' + s.dim + '</td>' +
+      '<td style="color:var(--text-secondary)">' + s.metric + '</td>' +
+      '<td class="signal-val">' + s.value + '</td>' +
+      '<td style="color:var(--text-muted);font-size:.82em">' + s.detail + '</td>' +
+      '<td><span class="signal-tag ' + s.status + '">' +
+        '<span class="light-dot ' + s.status + '"></span>' + s.tag +
+      '</span></td></tr>';
+  });
+  
+  html += '</tbody></table>';
+  document.getElementById('signalGrid').innerHTML = html;
+}
+
+// ---- 底部DCF关键假设参数速览 ----
+function renderAssumptionsBar() {
+  var b = dcf('base');
+  document.getElementById('assumptionsBar').innerHTML =
+    '<div class="assum-item"><span class="alabel">WACC:</span><span class="aval">' + (b.wacc*100).toFixed(1) + '%</span></div>' +
+    '<div class="assum-item"><span class="alabel">中期增速(CAGR):</span><span class="aval">~' + b.cagr + '%</span></div>' +
+    '<div class="assum-item"><span class="alabel">永续增长率(Base):</span><span class="aval">' + (SC.base.tg*100).toFixed(0) + '%</span></div>' +
+    '<div class="assum-item"><span class="alabel">有效税率:</span><span class="aval">' + (SC.base.tax*100).toFixed(0) + '%</span></div>' +
+    '<div class="assum-item"><span class="alabel">Beta:</span><span class="aval">' + Beta.toFixed(2) + '</span></div>' +
+    '<div class="assum-item"><span class="alabel">无风险利率(Rf):</span><span class="aval">' + (Rf*100).toFixed(2) + '%</span></div>' +
+    '<div class="assum-item"><span class="alabel">当前不复权价:</span><span class="aval" style="color:var(--accent-blue)">¥' + CP + '</span></div>' +
+    '<div class="assum-item"><span class="alabel">总市值:</span><span class="aval" style="color:var(--accent-blue)">¥' + (CP*SHARES).toLocaleString() + '亿</span></div>';
+}
+
+
+// ============================================================
+// 原有渲染函数
 // ============================================================
 
 function renderSummary() {
   var b = dcf('base');
-  document.getElementById('summaryGrid').innerHTML =
-    '<div class="summary-card"><div class="label">2025A \u8425\u4E1A\u6536\u5165</div><div class="value">4,237\u4EBF</div><div class="change up">YoY +19.0%</div></div>' +
-    '<div class="summary-card"><div class="label">2025A \u5F52\u6BCD\u51C0\u5229\u6DA6</div><div class="value">722\u4EBF</div><div class="change up">YoY +42.4%</div></div>' +
-    '<div class="summary-card"><div class="label">2025A \u51C0\u5229\u7387</div><div class="value">17.0%</div><div class="change up">+2.8pp</div></div>' +
-    '<div class="summary-card"><div class="label">WACC</div><div class="value neutral">8.42%</div><div class="change neutral">Rf=1.82% \u03B2=1.10</div></div>' +
-    '<div class="summary-card"><div class="label">Base Case \u516C\u5141\u4EF7\u503C</div><div class="value" style="color:var(--accent-blue)">' +
-    ('\xA5' + b.ps.toFixed(2)) + '</div><div class="change ' + (b.ups >= 0 ? 'up' : 'down') + '">' + 
-    (b.ups >= 0 ? '+' : '') + b.ups.toFixed(1) + '% vs \u73B0\u4EF7</div></div>';
+  document.getElementById('summaryGrid') && (document.getElementById('summaryGrid').innerHTML = '');
 }
 
 function renderScenarios() {
@@ -419,9 +809,9 @@ function renderWACC() {
     ['Beta (\u03B2)', Beta.toFixed(2), 'CATL vs \u6CAA\u6DF1 300'],
     ['\u80A1\u6743\u98CE\u9669\u6EA2\u4EF7 (ERP)', (ERP*100).toFixed(1) + '%', 'A\u80A1\u5E02\u573A\u957F\u671F\u5747\u503C'],
     ['\u80A1\u6743\u6210\u672C (Re)', (Re*100).toFixed(2) + '%', 'Re = Rf + \u03B2 x ERP'],
-    ['\u7A0D\u524D\u503A\u52A1\u6210\u672C (Rd)', (rd*100).toFixed(1) + '%', 'AAA\u7EA7\u4F01\u4E1A\u503A'],
+    ['\u7A3E\u524D\u503A\u52A1\u6210\u672C (Rd)', (rd*100).toFixed(1) + '%', 'AAA\u7EA7\u4F01\u4E1A\u503A'],
     ['\u6709\u6548\u7A0E\u7387', (tax*100).toFixed(0) + '%', '\u9AD8\u65B0\u6280\u672F\u4F01\u4E1A'],
-    ['\u7A0E\u540E\u503A\u52A1\u6210\u672C', (rdAfter*100).toFixed(2) + '%', 'Rd x (1-T)'],
+    ['\u7A0E\u540E\u503A\u52A1\u621B\u672C', (rdAfter*100).toFixed(2) + '%', 'Rd x (1-T)'],
     ['\u5E02\u503C', '19,040\u4EBF', '2026/4 \u4E0D\u590D\u6743\u80A1\u4EF7 x \u80A1\u672C'],
     ['\u51C0\u503A\u52A1', (-1750).toLocaleString() + '\u4EBF', '\u73B0\u91D1 > \u6709\u606F\u8D1F\u503A'],
     ['\u6743\u76CA\u6743\u91CD We', '100%', '\u51C0\u73B0\u91D1 \u2192 \u7EAF\u80A1\u6743'],
@@ -437,7 +827,7 @@ function renderWACC() {
   document.getElementById('waccFormula').innerHTML =
     '<div><span class="wf-var">Re</span> = Rf + \u03B2 x ERP = ' + (Rf*100).toFixed(2) + '% + ' + Beta + ' x ' + (ERP*100).toFixed(1) + '% = <span class="wf-res">' + (Re*100).toFixed(2) + '%</span></div><br>' +
     '<div><span class="wf-var">WACC</span> = We x Re + Wd x Rd(1-T) = 100% x ' + (Re*100).toFixed(2) + '% + 0% = <span class="wf-res">' + (wacc*100).toFixed(2) + '%</span></div>' +
-    '<div style="margin-top:8px;font-size:.85em;color:var(--text-secondary)">(\u51C0\u73B0\u91D1\u516C\u53F8\uFF0CWACC \u2248 \u80A1\u6743\u6210\u672C)</div>';
+    '<div style="margin-top:8px;font-size:.85em;color:var(--text-secondary)">(\u51C0\u73B0\u91D1\u516C\u53F8\uFF0CWACC \u2248 \u80A1\u6743\u621B\u672C)</div>';
 }
 
 var curTab = 'base';
@@ -445,11 +835,8 @@ function switchTab(t) {
   curTab = t;
   ['bear','base','bull'].forEach(function(k) {
     var tabEl = document.getElementById('tab' + k.charAt(0).toUpperCase() + k.slice(1));
-    if (k === t) {
-      tabEl.className = 'tab active-' + k;
-    } else {
-      tabEl.className = 'tab';
-    }
+    if (k === t) { tabEl.className = 'tab active-' + k; }
+    else { tabEl.className = 'tab'; }
   });
   renderProj();
 }
@@ -500,7 +887,7 @@ function renderDCF() {
       var c = r.ps > CP ? 'positive' : r.ps < CP ? 'negative' : '';
       return '<span class="' + c + '" style="font-weight:700;font-size:1.1em">\xA5' + r.ps.toFixed(2) + '</span>';
     }), true],
-    ['\u5F53\u524D\u4E0D\u590D\u6743\u80A1\u4EF7 (\u5143)', rs.map(function(){return '\xA5' + CP;})],
+    ['\u5F53\u524D\u4E0D\u590D\u6749\u80A1\u4EF7 (\u5143)', rs.map(function(){return '\xA5' + CP;})],
     ['\u4E0A\u884C/\u4E0B\u884C\u7A7A\u95F4', rs.map(function(r){
       var c = r.ups >= 0 ? 'positive' : 'negative';
       var sg = r.ups >= 0 ? '+' : '';
@@ -607,13 +994,13 @@ function renderSens() {
   
   heatmap('sens1',
     {label:'WACC', v:[0.06,0.07,0.075,0.08,0.0842,0.09,0.095,0.10,0.11,0.12], fmt:function(v){return (v*100).toFixed(1)+'%';}, isBase:function(r){return Math.abs(r-0.0842)<0.001;}},
-    {label:'g',   v:[0.01,0.015,0.02,0.025,0.03,0.035], fmt:function(v){return (v*100).toFixed(1)+'%';}, isBase:function(c){return Math.abs(c-0.025)<0.001;}},
+    {label:'g',   v:[0, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035], fmt:function(v){return (v*100).toFixed(1)+'%';}, isBase:function(c){return Math.abs(c-0.01)<0.001;}},
     sensCalc
   );
   
   heatmap('sens2',
     {label:'CAGR', v:[0.05,0.10,0.15,0.20,bc,0.25,0.30,0.35,0.40], fmt:function(v){return (v*100).toFixed(0)+'%';}, isBase:function(r){return Math.abs(r-bc)<0.005;}},
-    {label:'g',    v:[0.01,0.015,0.02,0.025,0.03,0.035], fmt:function(v){return (v*100).toFixed(1)+'%';}, isBase:function(c){return Math.abs(c-0.025)<0.001;}},
+    {label:'g',    v:[0, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035], fmt:function(v){return (v*100).toFixed(1)+'%';}, isBase:function(c){return Math.abs(c-0.01)<0.001;}},
     sensCalc2
   );
 }
@@ -697,20 +1084,37 @@ function renderCharts() {
 // 初始化
 // ============================================================
 document.addEventListener('DOMContentLoaded', function(){
-  // 更新价格徽章
+  // 价格徽章
   document.getElementById('priceBadge').textContent = 
-    '\u5F53\u524D\u4E0D\u590D\u6743\u80A1\u4EF7: \xA5' + CP + '.00 \u00B7 \u603B\u5E02\u503C: \xA5' + (CP * SHARES).toLocaleString() + '\u4EBF \u00B7 \u603B\u80A1\u672C: ' + SHARES + '\u4EBF\u80A1';
+    '\u5F53\u524D\u4E0D\u590D\u6749\u80A1\u4EF7: \xA5' + CP + '.00 \u00B7 \u603B\u5E02\u503C: \xA5' + (CP * SHARES).toLocaleString() + '\u4EBF \u00B7 \u603B\u80A1\u672C: ' + SHARES + '\u4EBF\u80A1';
   
-  // 渲染所有模块
-  renderSummary();
+  // 【新增】KPI卡片行
+  renderKPI();
+  
+  // 【新增】DCF底价安全垫（绿色强调）
+  renderSafetyHighlight();
+  
+  // 原有模块
   renderScenarios();
   renderGauge();
   renderHist();
+  
+  // 【新增】ECharts图表
+  renderDcfScenarioChart();
+  renderRelativeValChart();
+  
+  // 【新增】信号灯仪表盘
+  renderSignalGrid();
+  
+  // 原有模块继续
   renderWACC();
   switchTab('base');
   renderDCF();
   renderSens();
   renderCharts();
+  
+  // 【新增】底部假设参数栏
+  renderAssumptionsBar();
 });
 </script>
 </body>
