@@ -341,7 +341,7 @@ var SHARES = 44.0; // 总股本 (亿股)
 
 // ---- 新增：KPI 数据集 ----
 var KPI = {
-  pe_ttm: 26.30,
+  pe_ttm: 25.35,
   roe_2025: 24.72,
   ocf: 1332,
   ocf_yoy: 37.35,
@@ -352,8 +352,8 @@ var KPI = {
 
 // ---- 新增：相对估值数据 ----
 var REL_VAL = {
-  pe_current: 26.3,
-  pe_target_2026e: 30.0,
+  pe_current: 25.35,
+  pe_target_2026e: 25.0,
   pe_industry_avg: 22.0,
   pe_hist_high: 55.0,
   pe_hist_low: 18.0
@@ -364,7 +364,7 @@ var SIGNALS = [
   { dim: '盈利质量', metric: 'ROE', value: '24.72%', detail: '2025年度', status: 'green', tag: '优秀' },
   { dim: '成长性', metric: '电池销量', value: '661 GWh', detail: 'YoY +39%', status: 'green', tag: '高增长' },
   { dim: '现金流', metric: '经营性OCF', value: '1332亿', detail: 'YoY +37.4%', status: 'green', tag: '充沛' },
-  { dim: '估值水平', metric: 'A股远期PE(2026E)', value: '~18倍', detail: '低于历史中枢', status: 'green', tag: '偏低' },
+  { dim: '估值水平', metric: 'A股远期PE(2026E)', value: '~15倍', detail: '不复权价偏低', status: 'green', tag: '偏低' },
   { dim: '竞争地位', metric: 'Q1国内市占率', value: '50.1%', detail: '重返50%', status: 'green', tag: '领先' },
   { dim: '风险因素', metric: '碳酸锂价格敏感度', value: '中等偏高', detail: '利润弹性较大', status: 'amber', tag: '需关注' }
 ];
@@ -486,9 +486,9 @@ function dcf(k) {
 function renderKPI() {
   document.getElementById('kpiGrid').innerHTML =
     '<div class="kpi-card green">' +
-      '<div class="kpi-label">📈 A股 PE (TTM)</div>' +
+      '<div class="kpi-label">📈 PE (2025A)</div>' +
       '<div class="kpi-value">' + KPI.pe_ttm.toFixed(2) + ' <span style="font-size:.5em;color:var(--text-secondary)">倍</span></div>' +
-      '<div class="kpi-sub"><span class="kpi-arrow arrow-up">↑ 中等偏低</span> 历史中枢 ~35x</div>' +
+      '<div class="kpi-sub"><span class="kpi-arrow arrow-up">↑ 中等偏低</span> 不复权价计算</div>' +
     '</div>' +
     '<div class="kpi-card green">' +
       '<div class="kpi-label">💪 2025 ROE</div>' +
@@ -644,7 +644,7 @@ function renderRelativeValChart() {
     yAxis: {
       type: 'category',
       inverse: true,
-      data: ['\u5386\u53F2\u6700\u4F4E PE', '\u884C\u4E1A\u5E73\u5747 PE', '\u5F53\u524D PE (TTM)', '2026E \u5206\u6790\u5E08\u76EE\u6807 PE', '\u5386\u53F2\u6700\u9AD8 PE'],
+      data: ['\u5386\u53F2\u6700\u4F4E PE (\u524D\u590D\u6743)', '\u884C\u4E1A\u5E73\u5747 PE', '\u5F53\u524D PE (TTM) \u4E0D\u590D\u6743', '2026E \u5206\u6790\u5E08\u76EE\u6807 PE', '\u5386\u53F2\u6700\u9AD8 PE (\u524D\u590D\u6743)'],
       axisLine: { lineStyle: { color: '#2a3a50' } },
       axisLabel: { color: '#e8edf5', fontSize: 11 },
       axisTick: { show: false }
@@ -812,8 +812,8 @@ function renderWACC() {
     ['\u7A3E\u524D\u503A\u52A1\u6210\u672C (Rd)', (rd*100).toFixed(1) + '%', 'AAA\u7EA7\u4F01\u4E1A\u503A'],
     ['\u6709\u6548\u7A0E\u7387', (tax*100).toFixed(0) + '%', '\u9AD8\u65B0\u6280\u672F\u4F01\u4E1A'],
     ['\u7A0E\u540E\u503A\u52A1\u621B\u672C', (rdAfter*100).toFixed(2) + '%', 'Rd x (1-T)'],
-    ['\u5E02\u503C', '19,040\u4EBF', '2026/4 \u4E0D\u590D\u6743\u80A1\u4EF7 x \u80A1\u672C'],
-    ['\u51C0\u503A\u52A1', (-1750).toLocaleString() + '\u4EBF', '\u73B0\u91D1 > \u6709\u606F\u8D1F\u503A'],
+    ['\u5E02\u503C', '18,304\u4EBF', '2026/4 \u4E0D\u590D\u6743\u80A1\u4EF7 x \u80A1\u672C'],
+    ['\u51C0\u503A\u52A1', (-3175).toLocaleString() + '\u4EBF', '\u73B0\u91D1 > \u6709\u606F\u8D1F\u503A'],
     ['\u6743\u76CA\u6743\u91CD We', '100%', '\u51C0\u73B0\u91D1 \u2192 \u7EAF\u80A1\u6743'],
     ['\u503A\u52A1\u6743\u91CD Wd', '0%', '\u2014']
   ];
@@ -880,7 +880,7 @@ function renderDCF() {
     ['\u7EC8\u503C (\u4EBF\u5143)', rs.map(function(r){return r.tv.toLocaleString();})],
     ['\u7EC8\u503C\u73B0\u503C (\u4EBF\u5143)', rs.map(function(r){return r.pvt.toLocaleString();})],
     ['\u4F01\u4E1A\u4EF7\u503C (\u4EBF\u5143)', rs.map(function(r){return r.ev.toLocaleString();}), true],
-    ['\u51C0\u503A\u52A1 (\u4EBF\u5143)', rs.map(function(){return (-1750).toLocaleString();})],
+    ['\u51C0\u503A\u52A1 (\u4EBF\u5143)', rs.map(function(){return (-3175).toLocaleString();})],
     ['\u80A1\u6743\u4EF7\u503C (\u4EBF\u5143)', rs.map(function(r){return r.eq.toLocaleString();}), true],
     ['\u603B\u80A1\u672C (\u4EBF\u80A1)', rs.map(function(){return SHARES;})],
     ['\u6BCF\u80A1\u516C\u5141\u4EF7\u503C (\u5143)', rs.map(function(r){
