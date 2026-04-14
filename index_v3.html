@@ -498,7 +498,7 @@ body {
   <!-- 乐观情景 -->
   <div class="tab-content" id="tab-bull">
     <table class="scenario-table" id="dcfTableBull"></table>
-    <div class="tv-panel" id="tvfPanelBull"></div>
+    <div class="tv-panel" id="tvPanelBull"></div>
   </div>
 
   <!-- WACC分解 -->
@@ -1090,7 +1090,7 @@ function renderDCFTables(){
     }).join('');}
   document.getElementById('tvPanelBase').innerHTML=tvp('base');
   document.getElementById('tvPanelBear').innerHTML=tvp('bear');
-  document.getElementById('tvfPanelBull').innerHTML=tvp('bull');
+  document.getElementById('tvPanelBull').innerHTML=tvp('bull');
 
   document.querySelectorAll('#dcfTabs .tab-btn').forEach(function(b){
     b.addEventListener('click',function(){
@@ -1199,16 +1199,14 @@ function renderSignals(){
     return '<div class="signal-item"><span class="signal-dot '+s.dot+'"></span><div class="signal-text">'+s.dim+'</div><span class="signal-val">'+s.val+'</span></div>';
   }).join('');}
 
-/* L7 附录表格 */
+/* L7 附录表格 — 修复版：只保留一个正确版本 */
 function renderHistFinTable(){
-  var h=HIST_FINData,y=h.years;
+  var h=HIST_FIN_DATA,y=h.years;
   document.getElementById('histFinTable').innerHTML='<thead><tr><th>指标</th>'+y.map(function(yr){return'<th>'+yr+'</th>';}).join('')+'</tr></thead><tbody>'+
-    ['营业收入(亿)',h.revenue],['EBIT(亿)',h.ebit],['净利润(亿)',h.netProfit],
-    ['经营现金流(亿)',h.ocf],['自由现金流(亿)',h.fcf],['总资产(亿)',h.totalAssets],['净债务(亿)',h.netDebt]
-  ).map(function(row){return '<tr><td>'+row[0]+'</td>'+row[1].map(function(v){return '<td>'+(typeof v==='number'&&v<0?'<span style="color:#ef4444">'+v+'</span>':v)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody>';
+  [['营业收入(亿)',h.revenue],['EBIT(亿)',h.ebit],['净利润(亿)',h.netProfit],
+   ['经营现金流(亿)',h.ocf],['自由现金流(亿)',h.fcf],['总资产(亿)',h.totalAssets],['净债务(亿)',h.netDebt]]
+  .map(function(row){return'<tr><td>'+row[0]+'</td>'+row[1].map(function(v){return '<td>'+(typeof v==='number'&&v<0?'<span style="color:#ef4444">'+v+'</span>':v)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody>';
 }
-// Fix: HIST_FIN_DATA typo
-function renderHistFinTable(){
   var h=HIST_FIN_DATA,y=h.years;
   document.getElementById('histFinTable').innerHTML='<thead><tr><th>指标</th>'+y.map(function(yr){return'<th>'+yr+'</th>';}).join('')+'</tr></thead><tbody>'+
   [['营业收入(亿)',h.revenue],['EBIT(亿)',h.ebit],['净利润(亿)',h.netProfit],
@@ -1266,37 +1264,4 @@ function toggleCollapse(el){var body=el.nextElementSibling,arr=el.querySelector(
 window.addEventListener('DOMContentLoaded',init);
 </script>
 </body>
-</html>, ''],
-      ['企业价值 EV(亿)', '26,246', '', '', '', ''],
-      ['(-)净债务(亿)', '-2,530', '', '', '', ''],
-      ['股权价值(亿)', '23,716', '', '', '', ''],
-      ['(/)总股本(亿股)', '44', '', '', '', ''],
-      ['每股公允价值', '¥539', '', '', '', ''],
-      ['上行空间', '+26.2%', '', '', '', ''],
-    ],
-    tvChecks: [
-      { label: '终值/EV占比', value: '67%', ok: false, warnText: '偏高（理想<60%）' },
-      { label: '永续增长率 vs Rf', value: '2.5% < 3.0%', ok: true },
-      { label: '隐含Terminal PE', value: '35x', ok: true, warnText: '高于当前26x，合理' },
-      { label: 'vs 相对估值偏差', value: '<15%', ok: true },
-    ]
-  },
-  bear: {
-    name: '悲观 Bear', emoji: '🐻',
-    cagr: '8.0%', tg: '2.0%', wacc: '9.5%',
-    rows: [
-      ['预测期(5年)', '', '', '', '', ''],
-      ['年份', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5'],
-      ['营业收入(亿)', '4,576', '4,942', '5,337', '5,764', '6,225'],
-      ['EBIT(亿)', '779', '841', '909', '981', '1,059'],
-      ['税后NOPAT(亿)', '669', '723', '781', '843', '909'],
-      ['(+折旧-资本支出)(亿)', '-230', '-249', '-269', '-291', '-315'],
-      ['(-营运资本增量)(亿)', '-91', '-99', '-107', '-115', '-125'],
-      ['自由现金流FCF(亿)', '348', '375', '405', '437', '469'],
-      ['', '', '', '', '', ''],
-      ['终值计算', '', '', '', '', ''],
-      ['永续增长率 g', '2.0%', '', '', '', ''],
-      ['终值 TV(亿)', '10,546', '', '', '', ''],
-      ['终值/EV占比', '64%', '', '', '', ''],
-      ['', '', '', '', '', ''],
-      ['估值结果', '', '', '', '
+</html>
