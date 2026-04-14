@@ -1229,12 +1229,60 @@ function renderRelativeVal(){
   var da=[{value:26.3,itemStyle:{color:'#6366f1'},name:STOCK.name}];
   STOCK.peers.forEach(function(p){da.push({value:p.pe,itemStyle:{color:'#60a5fa'},name:p.name});});
   da.push({value:STOCK.industryAvgPe,itemStyle:{color:'#fb923c'},name:'行业平均'});
-  ch.setOption({tooltip:{trigger:'axis',formatter:function(p){return '<b>'+p[0].name+'</b><br/>PE(TTM): <b>'+p[0].value+'x</b>';}},
-    grid:{top:20,right:120,bottom:20,left:10},xAxis:{type:'value',axisLabel:{show:false},splitLine:{show:false}},
-    yAxis:{type:'category',data:da.map(function(d){return d.name;}),axisLabel:{color:'#e8eaed',fontSize:11},inverse:true},
-    series:[{type:'bar',data:da,barWidth:24,label:{show:true,position:'right',formatter:'{c}x',fontSize:12,color:'#e8eaed'},itemStyle:{color:function(p){return p.data.itemStyle.color;},borderRadius:[0,4,4,0]}}],
-    graphic:[{left:'center',bottom:15,type:'text',style:{text:'PE(TTM) 对比 — 数值越低越便宜',fontSize:10,color:'#555b6b'}}]});
-  window.addEventListener('resize',function(){ch.resize();});}
+  ch.setOption({
+    tooltip:{trigger:'axis',
+      formatter:function(p){
+        return '<b style="font-size:13px">'+p[0].name+'</b><br/>PE(TTM): <b style="font-size:16px;color:'+p[0].color+'">'+p[0].value+'x</b>';}},
+    grid:{top:20,right:12,bottom:35,left:85},
+    xAxis:{type:'value',axisLabel:{show:false},splitLine:{show:false}},
+    yAxis:{
+      type:'category',
+      data:da.map(function(d,i){return i+1;}),
+      axisLabel:{color:'#8b92a5',fontSize:11,fontWeight:600},
+      inverse:true,
+      axisLine:{lineStyle:{color:'rgba(255,255,255,.08)'}},
+      axisTick:{show:false}
+    },
+    series:[{
+      type:'bar',
+      data:da,
+      barWidth:26,
+      label:{
+        show:true,
+        position:'outside',
+        formatter:function(p){
+          return p.data.name+'  '+p.value+'x';
+        },
+        fontSize:12,
+        color:'#c4c9d4'
+      },
+      itemStyle:{color:function(p){return p.data.itemStyle.color;},borderRadius:[0,4,4,0]}
+    }],
+    graphic:[
+      {left:'center',bottom:8,type:'text',
+        style:{text:'PE(TTM) 对比 → 数值越低越便宜 | 虚线=行业均值',fontSize:10,color:'#555b6b'}},
+      {id:'industryLine',type:'line',left:'center',top:0,
+        shape:{x1:0,y1:0,x2:0,y2:0},
+        style:{lineDash:[6,4],stroke:'#fb923c',lineWidth:1}}
+    ]
+  });
+  /* 动态画虚线标记行业均值 */
+  setTimeout(function(){
+    var model=ch.getModel();
+    var xAxis=model.getComponent('xAxis','xAxis');
+    var xPt=xAxis.axisToPixel(STOCK.industryAvgPe);
+    var bbox=ch.getDom().getBoundingClientRect();
+    ch.setOption({
+      graphic:[
+        {left:xPt,top:5,type:'line',
+          shape:{x1:0,y1:0,x2:0,y2:bbox.height-45},
+          style:{lineDash:[6,4],stroke:'#fb923c',lineWidth:1.5}},
+        {left:xPt,top:bbox.height-40,type:'text',
+          style:{text:'行业 '+STOCK.industryAvgPe+'x',fontSize:9,color:'#fb923c'}}]
+    });
+  },100);
+  window.addEventListener('resize',function(){ch.resize();});
+}
 
 /* L6 安全边际+评分卡 */
 function renderDecisionPanel(){
