@@ -1251,18 +1251,21 @@ function renderRelativeVal(){
   });
   /* 动态画虚线标记行业均值 */
   setTimeout(function(){
-    var model=ch.getModel();
-    var xAxis=model.getComponent('xAxis','xAxis');
-    var xPt=xAxis.axisToPixel(STOCK.industryAvgPe);
-    var bbox=ch.getDom().getBoundingClientRect();
-    ch.setOption({
-      graphic:[
-        {left:xPt,top:5,type:'line',
-          shape:{x1:0,y1:0,x2:0,y2:bbox.height-45},
-          style:{lineDash:[6,4],stroke:'#fb923c',lineWidth:1.5}},
-        {left:xPt,top:bbox.height-40,type:'text',
-          style:{text:'行业 '+STOCK.industryAvgPe+'x',fontSize:9,color:'#fb923c'}}]
-    });
+    try{
+      var model=ch.getModel();
+      var xAxis=model.getComponent('xAxis','xAxis');
+      if(!xAxis||!xAxis.axisToPixel)return;
+      var xPt=xAxis.axisToPixel(STOCK.industryAvgPe);
+      var bbox=ch.getDom().getBoundingClientRect();
+      ch.setOption({
+        graphic:[
+          {left:xPt,top:5,type:'line',
+            shape:{x1:0,y1:0,x2:0,y2:bbox.height-45},
+            style:{lineDash:[6,4],stroke:'#fb923c',lineWidth:1.5}},
+          {left:xPt,top:bbox.height-40,type:'text',
+            style:{text:'行业 '+STOCK.industryAvgPe+'x',fontSize:9,color:'#fb923c'}}]
+      });
+    }catch(e){/* 行业均值虚线绘制失败，忽略 */}
   },100);
   window.addEventListener('resize',function(){ch.resize();});
 }
