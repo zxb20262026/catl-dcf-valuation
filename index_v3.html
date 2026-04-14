@@ -1150,19 +1150,46 @@ function renderHeatMaps(){
 
 function renderDCFEcharts(){
   var ch=echarts.init(document.getElementById('dcfScenarioChart'));
-  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},
-    formatter:function(p){var i=p[0].dataIndex,n=['🐻悲观 Bear','📊中性 Base','🐂乐观 Bull'],ev=[18460,26246,39810],ps=[362,539,847],sp=['-15.2%','+26.2%','+98.4%'];
-      return'<b>'+n[i]+'</b><br/>企业价值: <b>'+ev[i]+'</b>万亿<br/>每股公允价: <b>&yen;'+ps[i]+'</b><br/>上/下行空间: <b style="color:'+(sp[i][0]=='-'?'#ef4444':'#22c55e')+'">'+sp[i]+'</b>';}},
+  ch.setOption({
+    tooltip:{
+      trigger:'axis',
+      axisPointer:{type:'shadow'},
+      formatter:function(p){
+        var i=p[0].dataIndex;
+        var evs=[18460,26246,39810];
+        var pss=[362,539,847];
+        var sps=['-15.2%','+26.2%','+98.4%'];
+        var sc=sps[i][0]=='-'?'#ef4444':'#22c55e';
+        return '<b>'+['Bear','Base','Bull'][i]+'</b><br/>EV: <b>'+evs[i]+'</b><br/>PS: &yen;'+pss[i]+'<br/>'+'Space: <b style="color:'+sc+'">'+sps[i]+'</b>';
+      }
+    },
     grid:{top:30,right:20,bottom:40,left:50},
-    xAxis:{type:'category',data:['Bear\n悲观','Base\n中性','Bull\n乐观'],axisLabel:{color:'#8b92a5',fontSize:11}},
-    yAxis:{type:'value',name:'亿元',nameTextStyle:{color:'#8b92a5'},splitLine:{lineStyle:{color:'rgba(255,255,255,.04)'}},axisLabel:{color:'#8b92a5'}},
-    series:[{type:'bar',data:[
-      {value:18460,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#ef4444'},{offset:1,color:'#991b1b'}])}},
-      {value:26246,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#6366f1'},{offset:1,color:'#4338ca'}])}},
-      {value:39810,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#22c55e'},{offset:1,color:'#15803d'}])}}],barWidth:50,
-      label:{show:true,position:'top',formatter:'{c}亿',fontSize:12,color:'#e8eaed'}}],
-    markLine:{silent:true,symbol:'none',data:[{yAxis:18788,label:{formatter:'当前市值 ¥18,788亿',position:'insideEndTop',fontSize:11,color:'#f59e0b',backgroundColor:'rgba(0,0,0,.6)',padding:[3,8],borderRadius:4},lineStyle:{color:'#f59e0b',type:'solid',width:2}}]}}]);
-  window.addEventListener('resize',function(){ch.resize();});}
+    xAxis:{type:'category',data:['Bear','Base','Bull'],axisLabel:{color:'#8b92a5'}},
+    yAxis:{type:'value',name:'Yi',splitLine:{lineStyle:{color:'rgba(255,255,255,.04)'}},axisLabel:{color:'#8b92a5'}},
+    series:[{
+      type:'bar',
+      barWidth:56,
+      data:[
+        {value:18460,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#ef4444'},{offset:1,color:'#991b1b'}])}},
+        {value:26246,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#6366f1'},{offset:1,color:'#4338ca'}])}},
+        {value:39810,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#22c55e'},{offset:1,color:'#15803d'}])}}
+      ],
+      label:{show:true,position:'top',formatter:'{c}Yi',fontSize:12,color:'#e8eaed'}
+    }],
+    markLine:{
+      silent:true,
+      symbol:'none',
+      data:[{
+        yAxis:18788,
+        label:{formatter:'Current MCAP 18788 Yi',position:'insideEndTop',color:'#f59e0b',fontSize:11,backgroundColor:'rgba(0,0,0,.6)',padding:[3,8],borderRadius:4},
+        lineStyle:{color:'#f59e0b',width:2}
+      }]
+    }
+  });
+  window.addEventListener('resize',function(){ch.resize();});
+}
+
+
 
 function renderRelativeVal(){
   var ch=echarts.init(document.getElementById('relativeValChart'));
@@ -1221,11 +1248,7 @@ function renderHistFinTable(){
    ['经营现金流(亿)',h.ocf],['自由现金流(亿)',h.fcf],['总资产(亿)',h.totalAssets],['净债务(亿)',h.netDebt]]
   .map(function(row){return'<tr><td>'+row[0]+'</td>'+row[1].map(function(v){return '<td>'+(typeof v==='number'&&v<0?'<span style="color:#ef4444">'+v+'</span>':v)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody>';
 }
-  var h=HIST_FIN_DATA,y=h.years;
-  document.getElementById('histFinTable').innerHTML='<thead><tr><th>指标</th>'+y.map(function(yr){return'<th>'+yr+'</th>';}).join('')+'</tr></thead><tbody>'+
-  [['营业收入(亿)',h.revenue],['EBIT(亿)',h.ebit],['净利润(亿)',h.netProfit],
-   ['经营现金流(亿)',h.ocf],['自由现金流(亿)',h.fcf],['总资产(亿)',h.totalAssets],['净债务(亿)',h.netDebt]]
-  .map(function(row){return'<tr><td>'+row[0]+'</td>'+row[1].map(function(v){return'<td>'+(typeof v==='number'&&v<0?'<span style="color:#ef4444">'+v+'</span>':v)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody>';}
+
 
 function renderForecastTable(){
   var f=FORECAST_DATA,y=f.years;
