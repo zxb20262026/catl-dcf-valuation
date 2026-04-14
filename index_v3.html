@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!--
+╔══════════════════════════════════════════════════════════════════╗
+║  📊 股票多维估值仪表盘 v3.0 — 通用模板                           ║
+║                                                                  ║
+║  【使用说明】                                                     ║
+║  1. 本模板适用于A股/港股/美股/ETF的估值分析                       ║
+║  2. 换股票时只需修改"=== 数据配置区 ==="中的数据即可               ║
+║  3. 所有模块都有中文注释说明用途                                  ║
+║                                                                  ║
+║  【框架层级】(自上而下)                                           ║
+║  L0 页头 → L1 KPI → L2 快速筛选 → L3 深度体检                    ║
+║       → L4 相对估值(★PE Band) → L5 DCF引擎                        ║
+║       → L6 投资决策 → L7 附录(可折叠)                             ║
+║                                                                  ║
+║  【给小白看的】每段代码前都有 <!-- 💡 说明 --> 注释                 ║
+╚══════════════════════════════════════════════════════════════════╝
+-->
+<title>📊 股票多维估值仪表盘 v3 — 宁德时代(300750)</title>
+
+<!-- ========== 引入图表库 ========== -->
+<!-- ECharts: 用于柱状图、热力图、PE Band等复杂交互图 -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<!-- Chart.js: 用于雷达图、折线图组合 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+
+<style>
+/* ===== 全局主题：暗色科技风 ===== */
+:root {
+  --bg-primary: #0f1117;    /* 主背景 - 深黑蓝 */
+  --bg-secondary: #1a1d27;  /* 卡片背景 - 稍亮 */
+  --bg-card: #161922;      /* 区块背景 */
+  --border: #252a36;       /* 边框色 */
+  --text-primary: #e8eaed;  /* 主文字 */
+  --text-secondary: #8b92a5; /* 次要文字 */
+  --text-muted: #555b6b;   /* 淡化文字 */
+  --accent-blue: #6366f1;  /* 强调色-蓝 */
+  --accent-green: #22c55e; /* 绿色-涨/好 */
+  --accent-red: #ef4444;   /* 红色-跌/差 */
+  --accent-amber: #f59e0b; /* 黄色-警告 */
+  --accent-cyan: #06b6d4;  /* 青色-信息 */
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, 'Segoe UI', 'PingFang SC', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ===== 容器布局 ===== */
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+/* ===== L0: 页头 ===== */
+/* 【小白看这里】页头显示股票名称和最新价格，让你一眼知道在分析哪只股票 */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(6,182,212,0.08));
+  border: 1px solid rgba(99,102,241,0.25);
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+.header h1 { font-size: 1.5em; }
+.header h1 span { color: var(--accent-cyan); }
+.header-meta { font-size: 0.88em; color: var(--text-secondary); }
+.header-meta .price { color: var(--accent-green); font-weight: 700; }
+
+/* ===== L1: KPI卡片行 ===== */
+/* 【小白看这里】5个数字卡片 = 这只股票的"体检报告首页"
+     PE=贵不贵？ROE=赚钱效率？FCF收益率=现金回报？
+     市占率=行业地位？净现金比=安全垫厚度？ */
+.kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px; }
+.kpi-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px; text-align: center;
+  transition: transform .2s, border-color .2s;
+}
+.kpi-card:hover { transform: translateY(-2px); border-color: var(--accent-blue); }
+.kpi-card .label { font-size: 0.78em; color: var(--text-secondary); margin-bottom: 6px; }
+.kpi-card .value { font-size: 1.6em; font-weight: 700; }
+.kpi-card .sub { font-size: 0.75em; color: var(--text-muted); margin-top: 4px; }
+.kpi-card.good .value { color: var(--accent-green); }
+.kpi-card.warn .value { color: var(--accent-amber); }
+.kpi-card.bad .value { color: var(--accent-red); }
+
+/* ===== 通用区块样式 ===== */
+.section {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 24px; margin-bottom: 20px;
+}
+.section h2 {
+  font-size: 1.1em; margin-bottom: 18px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;
+}
+
+/* ===== 图表容器双列布局 ===== */
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px; }
+.chart-container { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+.chart-container h3 { font-size: 0.95em; margin-bottom: 14px; color: var(--text-secondary); }
+.chart-wrapper { height: 360px; }
+.chart-wrapper-tall { height: 420px; }
+.chart-wrapper-short { height: 280px; }
+
+/* ===== L2: 十分钟快速测试 ===== */
+/* 【小白看这里】9个问题快速判断这只股票值不值得深入研究
+     ≥7个通过 = 值得深入看；<5个通过 = 直接排除，省时间 */
+.tenmin-list { list-style: none; padding: 0; }
+.tenmin-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 0.88em;
+}
+.tenmin-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.72em; font-weight: 700; flex-shrink: 0;
+  background: rgba(99,102,241,.15); color: var(--accent-blue);
+}
+.tenmin-num.pass { background: rgba(34,197,94,.15); color: var(--accent-green); }
+.tenmin-num.fail { background: rgba(239,68,68,.15); color: var(--accent-red); }
+.tenmin-num.warn { background: rgba(245,158,11,.15); color: var(--accent-amber); }
+.tenmin-text { flex: 1; }
+.tenmin-q { font-weight: 600; margin-bottom: 2px; }
+.tenmin-a { color: var(--text-secondary); font-size: 0.84em; }
+.tenmin-result { font-weight: 700; font-size: 0.84em; flex-shrink: 0; margin-top: 2px; }
+.tenmin-summary-box {
+  background: linear-gradient(135deg, rgba(99,102,241,.08), rgba(6,182,212,.05));
+  border-radius: 14px; padding: 22px; text-align: center;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+}
+.tenmin-big-score { font-size: 2.8em; font-weight: 800; line-height: 1; }
+.tenmin-verdict { margin-top: 10px; font-size: 1em; font-weight: 600; padding: 6px 18px; border-radius: 14px; }
+
+/* ===== L3: 护城河五步检验 ===== */
+/* 【小白看这里】护城河 = 别人抢不走这家公司的赚钱能力
+     宽护城河(茅台)→可以长期持有；窄/无护城河→随时可能被超越
+     五步法帮你系统评估护城河的强度和可持续性 */
+.moat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 0.86em; }
+.moat-step {
+  background: rgba(99,102,241,.06); border: 1px solid rgba(99,102,241,.15);
+  border-radius: 12px; padding: 15px 17px;
+}
+.moat-step h4 { color: var(--accent-cyan); margin-bottom: 9px; font-size: 0.93em; }
+.moat-item { display: flex; align-items: center; gap: 7px; padding: 4px 0; line-height: 1.55; }
+.moat-check {
+  width: 17px; height: 17px; border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.68em; font-weight: 700; flex-shrink: 0;
+}
+.moat-check.pass { background: rgba(34,197,94,.2); color: var(--accent-green); border: 1px solid rgba(34,197,94,.4); }
+.moat-check.warn { background: rgba(245,158,11,.2); color: var(--accent-amber); border: 1px solid rgba(245,158,11,.4); }
+.moat-check.fail { background: rgba(239,68,68,.2); color: var(--accent-red); border: 1px solid rgba(239,68,68,.4); }
+.moat-bar { height: 7px; border-radius: 4px; background: var(--bg-secondary); margin-top: 7px; overflow: hidden; }
+.moat-bar-fill { height: 100%; border-radius: 4px; transition: width .6s; }
+.moat-score-badge { display: inline-block; padding: 5px 15px; border-radius: 18px; font-weight: 700; font-size: 0.95em; margin-top: 5px; }
+
+/* ===== L3: 财务健康雷达 ===== */
+/* 【小白看这里】六边形雷达图 = 公司财务的全面体检
+     六个维度都向外凸出 = 财务非常健康
+     某个方向凹陷 = 那个方面有隐患，需要关注 */
+.radar-wrapper { display: flex; justify-content: center; padding: 10px 0; }
+
+/* ===== L3: 管理层治理评估 ===== */
+/* 【小白看这里】好公司 + 好管理层 = 放心投资
+     管理层是否诚信？是否把股东利益放第一位？
+     这个板块帮你看清管理层的"人品" */
+.gov-list { list-style: none; padding: 0; font-size: 0.86em; }
+.gov-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.gov-item .g-label { flex: 1; }
+.gov-item .g-bar { width: 80px; height: 6px; background: var(--bg-secondary); border-radius: 3px; overflow: hidden; }
+.gov-item .g-bar-fill { height: 100%; border-radius: 3px; }
+.gov-item .g-score { font-weight: 700; width: 35px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ===== L4: PE Band 估值带（核心模块！）===== */
+/* 【小白看这里】这是整个仪表盘中最重要的图之一！
+     PE Band告诉你：当前股价处于历史什么位置？
+     ★ 绿色区域(底部)=历史便宜区间，可能是买入机会
+     ★ 黄色区域(中间)=合理价格区间
+     ★ 红色区域(顶部)=历史贵价区间，谨慎追高
+     ★ 分位数Pxx = 当前PE比历史上xx%的时间都便宜/贵
+     例如P30 = 比70%的历史时间都便宜 */
+.peband-panel {
+  position: relative; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 20px;
+}
+.peband-panel h3 { font-size: 0.95em; margin-bottom: 14px; color: var(--text-secondary); }
+.peband-main { height: 430px; }
+.peband-side-panel {
+  background: rgba(99,102,241,.05); border: 1px solid rgba(99,102,241,.12);
+  border-radius: 12px; padding: 16px; font-size: 0.84em;
+}
+.pe-stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.pe-stat-row:last-child { border-bottom: none; }
+.pe-stat-label { color: var(--text-secondary); }
+.pe-stat-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+.pe-zone-tag {
+  display: inline-block; padding: 5px 14px; border-radius: 12px;
+  font-weight: 600; font-size: 0.88em; text-align: center; margin-top: 10px; width: 100%;
+}
+/* 右侧多维度估值对比 */
+.val-metric-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 0.86em;
+}
+.val-metric-row:last-child { border-bottom: none; }
+.val-m-name { width: 90px; color: var(--text-secondary); flex-shrink: 0; }
+.val-m-value { font-weight: 700; font-size: 1.05em; font-variant-numeric: tabular-nums; }
+.val-m-pct { flex: 1; }
+.val-m-bar { height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden; }
+.val-m-bar-fill { height: 100%; border-radius: 4px; transition: width .8s ease; }
+.val-m-pct-label { font-size: 0.75em; color: var(--text-muted); width: 40px; text-align: right; }
+
+/* ===== L5: DCF估值引擎 ===== */
+/* 【小白看这里】DCF = 现金流折现估值，是最科学的"算公司到底值多少钱"的方法
+     三种情景：悲观(Bear)/中性(Base)/乐观(Bull)
+     给你一个估值的"区间"而不是一个死数字
+     敏感性热力图 = 测试如果假设变了，结果会怎样 */
+.scenario-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+.scenario-table th { background: rgba(99,102,241,.1); padding: 10px 12px; text-align: left; font-weight: 600; font-size: 0.78em; }
+.scenario-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.05); }
+.scenario-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.scenario-table .highlight { font-weight: 700; font-size: 1.05em; }
+.dcf-note { font-size: 0.78em; color: var(--text-muted); margin-top: 10px; line-height: 1.6; }
+.wacc-breakdown { font-size: 0.83em; }
+.wacc-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed rgba(255,255,255,.06); }
+
+/* ===== 终值校验面板 ===== */
+.tv-panel {
+  background: linear-gradient(135deg, rgba(245,158,11,.06), rgba(245,158,11,.02));
+  border: 1px solid rgba(245,158,11,.2); border-radius: 12px; padding: 16px 18px;
+  font-size: 0.85em; margin-top: 14px;
+}
+.tv-panel h4 { color: var(--accent-amber); margin-bottom: 10px; font-size: 0.92em; }
+.tv-check { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+.tv-check .ok { color: var(--accent-green); }
+.tv-check .warn { color: var(--accent-amber); }
+
+/* 敏感性热力图容器 */
+.heat-wrapper { height: 320px; margin-top: 14px; }
+
+/* Tab 切换 */
+.tab-group { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.tab-btn {
+  padding: 7px 18px; border-radius: 10px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-secondary); cursor: pointer;
+  font-size: 0.83em; font-weight: 500; transition: all .2s;
+}
+.tab-btn:hover { border-color: var(--accent-blue); color: var(--text-primary); }
+.tab-btn.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ===== L6: 安全边际 & 评分卡 ===== */
+/* 【小白看这里】安全边际 = "打折买好货"
+     如果一家公司值100块，你80块买到，安全边际就是20%
+     护城河越宽的公司，要求的安全边际可以低一些
+     综合评分卡 = 从6个维度打分加权，给出最终投资建议 */
+.margin-box { padding: 18px; text-align: center; }
+.margin-ring {
+  width: 180px; height: 180px; border-radius: 50%;
+  margin: 0 auto 14px; position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.margin-ring-inner {
+  width: 140px; height: 140px; border-radius: 50%;
+  background: var(--bg-card); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; position: relative; z-index: 1;
+}
+.margin-pct { font-size: 2em; font-weight: 700; }
+.margin-label { font-size: 0.8em; color: var(--text-secondary); }
+.margin-verdict { font-size: 1.15em; font-weight: 700; margin-top: 8px; padding: 6px 20px; border-radius: 16px; display: inline-block; }
+.margin-detail-row { font-size: 0.82em; color: var(--text-secondary); padding: 3px 0; }
+
+.score-table { width: 100%; border-collapse: collapse; font-size: 0.84em; }
+.score-table th { text-align: left; padding: 9px 10px; color: var(--text-secondary); font-weight: 500; border-bottom: 2px solid var(--border); font-size: 0.75em; text-transform: uppercase; letter-spacing: .5px; }
+.score-table td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,.05); }
+.score-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.score-bar { height: 6px; border-radius: 3px; background: var(--bg-secondary); overflow: hidden; width: 70px; display: inline-block; vertical-align: middle; }
+.score-bar-fill { height: 100%; border-radius: 3px; }
+.score-total { font-size: 1.7em; font-weight: 700; text-align: center; padding: 14px; }
+.score-verdict { font-size: 0.88em; font-weight: 600; text-align: center; padding: 8px; border-radius: 12px; margin-top: 6px; }
+.score-weight-hint { font-size: 0.74em; color: var(--text-muted); text-align: center; margin-top: 10px; line-height: 1.55; }
+
+/* ===== L7: 可折叠附录区 ===== */
+/* 【小白看这里】这里是详细的数据表格和辅助图表
+     不想看细节可以折叠起来，需要时点开查看 */
+.collapsible-header {
+  cursor: pointer; user-select: none;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 0; border-top: 1px solid var(--border); margin-top: 4px;
+}
+.collapsible-header:hover { opacity: 0.85; }
+.collapsible-arrow { transition: transform .3s; font-size: 0.8em; }
+.collapsible-arrow.open { transform: rotate(90deg); }
+.collapsible-body { display: none; margin-top: 14px; }
+.collapsible-body.open { display: block; }
+
+/* 数据表样式 */
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.8em; }
+.data-table th { background: rgba(99,102,241,.08); padding: 8px 10px; text-align: right; font-weight: 500; font-size: 0.76em; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+.data-table th:first-child { text-align: left; }
+.data-table td { padding: 7px 10px; text-align: right; border-bottom: 1px solid rgba(255,255,255,.03); font-variant-numeric: tabular-nums; }
+.data-table td:first-child { text-align: left; color: var(--text-secondary); }
+.data-table tr:hover td { background: rgba(255,255,255,.02); }
+
+/* Chart.js 辅助图表组 */
+.chartjs-group { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+.chartjs-item { background: var(--bg-secondary); border-radius: 10px; padding: 14px; }
+.chartjs-item h5 { font-size: 0.82em; color: var(--text-secondary); margin-bottom: 8px; }
+.chartjs-canvas { height: 200px; }
+
+/* ===== 信号灯仪表盘 ===== */
+.signal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; font-size: 0.86em; }
+.signal-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; background: var(--bg-secondary); border-radius: 10px;
+}
+.signal-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.signal-dot.green { background: var(--accent-green); box-shadow: 0 0 8px rgba(34,197,94,.5); }
+.signal-dot.amber { background: var(--accent-amber); box-shadow: 0 0 8px rgba(245,158,11,.5); }
+.signal-dot.red { background: var(--accent-red); box-shadow: 0 0 8px rgba(239,68,68,.5); }
+.signal-text { flex: 1; }
+.signal-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ===== 响应式适配 ===== */
+@media (max-width: 1100px) {
+  .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+  .chart-row { grid-template-columns: 1fr; }
+  .moat-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .container { padding: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<!-- ============================================================ -->
+<!--  L0: 页头 — 股票基本信息                                      -->
+<!--  【小白看这里】打开页面第一眼看到的信息：股票名字+最新价格      -->
+<!-- ============================================================ -->
+<div class="header">
+  <div>
+    <h1>📊 <span id="stockName">宁德时代</span> (<span id="stockCode">300750.SZ</span>) 多维估值仪表盘</h1>
+    <div class="header-meta">
+      数据截至：<span class="update-time">2026年4月13日（收盘）</span>
+      · 来源：公司公告 / 分析师一致预期 / Tushare
+    </div>
+  </div>
+  <div style="text-align:right; font-size:0.92em;">
+    <div><span id="hdrPrice" class="price">¥427</span> · 市值<span id="hdrMcap">¥18,788亿</span> · <span id="hdrShares">44</span>亿股</div>
+    <div id="hdrChange" style="color:var(--text-secondary);font-size:0.84em;margin-top:2px;"></div>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!--  L1: KPI 一眼掌握核心指标                                     -->
+<!--  【小白看这里】就像体检报告首页，5个最重要的健康指标            -->
+<!--  PE=市盈率(越低越便宜) ROE=净资产收益率(越高越能赚)             -->
+<!--  FCF收益率=自由现金流回报 市占率=行业地位 净现金比=安全垫       -->
+<!-- ============================================================ -->
+<div class="kpi-grid" id="kpiGrid"></div>
+
+
+<!-- ============================================================ -->
+<!--  DCF情景柱状图 + 相对估值对比                                 -->
+<!-- ============================================================ -->
+<div class="chart-row">
+  <div class="chart-container">
+    <h3>📊 DCF 估值情景分析（企业价值 · 万亿元）</h3>
+    <div class="chart-wrapper-tall" id="dcfScenarioChart"></div>
+  </div>
+  <div class="chart-container">
+    <h3>⚖️ 相对估值对比（PE倍数）</h3>
+    <div class="chart-wrapper" id="relativeValChart"></div>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!--  L2: 十分钟快速测试 — 晨星9问筛选                             -->
+<!--  【小白看这里】巴菲特说："我不会在这只股票上花10分钟，           -->
+<!--  除非它通过了我的快速筛选。" 9个问题帮你快速排除烂公司          -->
+<!--  ≥7/9通过 = 值得深入研究                                       -->
+<!-- ============================================================ -->
+<div class="section">
+  <h2>📋 十分钟快速筛选 — 晨星《股市真规则》9问</h2>
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:stretch;">
+    <ul class="tenmin-list" id="tenminList"></ul>
+    <div class="tenmin-summary-box" id="tenminSummaryBox"></div>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!--  L3: 决策层 — 三大支柱                                         -->
+<!--  【小白看这里】价值投资的三大核心问题：                          -->
+<!--  ① 这家公司有护城河吗？（别人抢不走它的生意）                   -->
+<!--  ② 财务健康吗？（会不会突然暴雷）                              -->
+<!--  ③ 管理层靠谱吗？（会不会坑股东）                               -->
+<!-- ============================================================ -->
+
+<div class="section">
+  <h2>🏰 护城河五步检验 — 《股市真规则》晨星方法论</h2>
+  <div class="moat-grid" id="moatGrid"></div>
+</div>
+
+<div class="chart-row">
+  <!-- 财务健康雷达图 -->
+  <div class="chart-container">
+    <h3>💪 财务健康六维雷达 — 全面体检</h3>
+    <div class="radar-wrapper"><canvas id="healthRadar" height="340"></canvas></div>
+    <div id="dangerSignals" style="margin-top:12px;font-size:0.82em;color:var(--text-secondary);line-height:1.65;"></div>
+  </div>
+  <!-- 管理层/公司治理评估 -->
+  <div class="chart-container">
+    <h3>👔 管理层与公司治理评估</h3>
+    <ul class="gov-list" id="govList" style="padding:0 10px;"></ul>
+    <div id="govSummary" style="margin-top:14px;padding:12px;background:rgba(99,102,241,.05);border-radius:10px;font-size:0.84em;text-align:center;"></div>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!--  L4: PE Band 估值带 ★ 核心模块                                -->
+<!--  【小白看这里】⭐ 这是全页面最重要的图之一！                      -->
+<!--  它回答："现在的价格在历史上算贵还是便宜？"                      -->
+<!--  左边大图 = PE走势曲线 + 统计带(均值/±1σ)，像河流的河道         -->
+<!--  价格在河道下沿 = 便宜(绿色)；在上沿 = 贵(红色)                  -->
+<!--  右侧 = 当前精确位置(分位数Pxx) + 多维度估值快照                 -->
+<!-- ============================================================ -->
+
+<div class="peband-panel">
+  <h3>📈 PE Band 估值带 — 历史定位分析</h3>
+  <div style="display:grid;grid-template-columns:1fr 260px;gap:18px;">
+    <!-- 左：PE Band主图 -->
+    <div class="peband-main" id="peBandChart"></div>
+    <!-- 右：统计数据面板 -->
+    <div class="peband-side-panel" id="peSidePanel">
+      <!-- JS动态填充 -->
+    </div>
+  </div>
+</div>
+
+<!-- L4辅：多维度估值分位对比 -->
+<div class="chart-container" style="margin-bottom:20px;">
+  <h3>📊 多维度估值分位对比 — 各指标当前位置</h3>
+  <div id="valMetricsPanel" style="padding:10px 4px;">
+    <!-- JS动态填充 -->
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!--  L5: DCF估值引擎                                              -->
+<!--  【小白看这里】DCF(现金流折现) = 把公司未来每年能赚的现金        -->
+<!--  按照利率折算回今天，得出公司到底值多少钱                        -->
+<!--  三种情景给你一个合理的估值"区间"，而不是一个拍脑袋的数字          -->
+<!-- ============================================================ -->
+<div class="section">
+  <h2>💰 DCF 估值模型 — 企业内在价值测算</h2>
+
+  <!-- 情景Tab切换 -->
+  <div class="tab-group" id="dcfTabs">
+    <button class="tab-btn active" data-tab="base">📊 中性 Base</button>
+    <button class="tab-btn" data-tab="bear">🐻 悲观 Bear</button>
+    <button class="tab-btn" data-tab="bull">🐂 乐观 Bull</button>
+  </div>
+
+  <!-- 中性情景 -->
+  <div class="tab-content active" id="tab-base">
+    <table class="scenario-table" id="dcfTableBase"></table>
+    <div class="tv-panel" id="tvPanelBase"></div>
+  </div>
+
+  <!-- 悲观情景 -->
+  <div class="tab-content" id="tab-bear">
+    <table class="scenario-table" id="dcfTableBear"></table>
+    <div class="tv-panel" id="tvPanelBear"></div>
+  </div>
+
+  <!-- 乐观情景 -->
+  <div class="tab-content" id="tab-bull">
+    <table class="scenario-table" id="dcfTableBull"></table>
+    <div class="tv-panel" id="tvfPanelBull"></div>
+  </div>
+
+  <!-- WACC分解 -->
+  <div style="margin-top:18px;padding:16px;background:var(--bg-secondary);border-radius:12px;">
+    <h4 style="font-size:0.9em;margin-bottom:10px;">🧮 WACC 加权平均资本成本分解</h4>
+    <div class="wacc-breakdown" id="waccBreakdown"></div>
+  </div>
+
+  <!-- 敏感性热力图 -->
+  <div style="margin-top:18px;">
+    <h4 style="font-size:0.9em;margin-bottom:10px;">🌡️ 敏感性分析 — WACC × 永续增长率(g)</h4>
+    <div class="heat-wrapper" id="heatMapWaccG"></div>
+  </div>
+  <div style="margin-top:14px;">
+    <h4 style="font-size:0.9em;margin-bottom:10px;">🌡️ 敏感性分析 — 收入CAGR × 永续增长率(g)</h4>
+    <div class="heat-wrapper" id="heatMapCagrG"></div>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!--  L6: 投资决策面板                                            -->
+<!--  【小白看这里】前面所有分析汇聚到这里，给出最终建议              -->
+<!--  安全边际 = 打折买好货的程度                                    -->
+<!--  评分卡 = 6个维度综合打分                                       -->
+<!--  最终结论 = 买/观望/还是不碰                                   -->
+<!-- ============================================================ -->
+<div class="section">
+  <h2>🛡️ 投资决策矩阵 &amp; 综合评分</h2>
+  <div style="display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:start;">
+    <!-- 左：安全边际环形图 -->
+    <div style="text-align:center;">
+      <div class="margin-box">
+        <div class="margin-ring" id="marginRing"><div class="margin-ring-inner">
+          <span class="margin-pct" id="marginPct">—%</span>
+          <br><span class="margin-label">安全边际</span>
+        </div></div>
+        <div class="margin-verdict" id="marginVerdict"></div>
+      </div>
+      <div id="marginDetails" style="margin-top:14px;display:flex;flex-wrap:wrap;justify-content:center;gap:10px;font-size:0.83em;color:var(--text-secondary);"></div>
+    </div>
+    <!-- 右：综合评分卡 -->
+    <div>
+      <table class="score-table" id="scoreTable"></table>
+      <div class="score-total" id="scoreTotal"></div>
+      <div class="score-verdict" id="scoreVerdict"></div>
+      <div class="score-weight-hint" id="weightHint"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!--  L7: 附录数据区（可折叠）                                      -->
+<!--  【小白看这里】详细的数据明细，不需要的时候收起来                -->
+<!--  点击每个标题栏即可展开/折叠                                    -->
+<!-- ============================================================ -->
+<div class="section">
+  <h2>📁 附录数据（点击展开详情）</h2>
+
+  <!-- 7a: 信号灯仪表盘 -->
+  <div class="collapsible-header" onclick="toggleCollapse(this)">
+    <span>🚦 投资信号灯总览</span>
+    <span class="collapsible-arrow">▶</span>
+  </div>
+  <div class="collapsible-body open">
+    <div class="signal-grid" id="signalGrid"></div>
+  </div>
+
+  <!-- 7b: 历史财务数据表 -->
+  <div class="collapsible-header" onclick="toggleCollapse(this)">
+    <span>📋 历史财务数据（6年）</span>
+    <span class="collapsible-arrow">▶</span>
+  </div>
+  <div class="collapsible-body">
+    <div style="overflow-x:auto;"><table class="data-table" id="histFinTable"></table></div>
+  </div>
+
+  <!-- 7c: 5年预测明细 -->
+  <div class="collapsible-header" onclick="toggleCollapse(this)">
+    <span>📈 未来5年预测明细（三情景）</span>
+    <span class="collapsible-arrow">▶</span>
+  </div>
+  <div class="collapsible-body">
+    <div style="overflow-x:auto;"><table class="data-table" id="forecastTable"></table></div>
+  </div>
+
+  <!-- 7d: Chart.js图表组 -->
+  <div class="collapsible-header" onclick="toggleCollapse(this)">
+    <span>📉 财务趋势图表组</span>
+    <span class="collapsible-arrow">▶</span>
+  </div>
+  <div class="collapsible-body">
+    <div class="chartjs-group">
+      <div class="chartjs-item"><h5>营收 & 净利润趋势</h5><div class="chartjs-canvas"><canvas id="cjRevProfit"></canvas></div></div>
+      <div class="chartjs-item"><h5>利润率趋势</h5><div class="chartjs-canvas"><canvas id="cjMargins"></canvas></div></div>
+      <div class="chartjs-item"><h5>自由现金流趋势</h5><div class="chartjs-canvas"><canvas id="cjFcf"></canvas></div></div>
+      <div class="chartjs-item"><h5>净现金 & 净现金/市值比</h5><div class="chartjs-canvas"><canvas id="cjNetCash"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 页脚 -->
+<div style="text-align:center;padding:24px 0;font-size:0.76em;color:var(--text-muted);">
+  📊 股票多维估值仪表盘 v3.0 · 基于《股市真规则》晨星方法论 · 数据来源：Tushare/公司公告<br>
+  <span style="opacity:.6">本工具仅供参考，不构成投资建议。投资有风险，入市需谨慎。</span>
+</div>
+
+</div><!-- /.container -->
+
+
+
+<!-- ============================================================ -->
+<!--                     JavaScript 数据配置区                         -->
+<!--  ⚠️ 【换股票时主要改这里】                                      -->
+<!--  所有业务数据集中在这个对象里，修改后整个页面自动更新              -->
+<!-- ============================================================ -->
+<script>
+// ================================================================
+//  === 股票基础信息 ===
+//  【小白看这里】换股票时修改这里的名字、代码、价格等基本信息
+// ================================================================
+var STOCK = {
+  name: '宁德时代',
+  code: '300750.SZ',
+  industry: '动力电池 / 新能源',
+  exchange: '深交所创业板',
+  listingDate: '2018-06-11',
+
+  // 最新行情（手动更新或接口获取）
+  price: 427,           // 当前股价(元)
+  totalMcap: 18788,     // 总市值(亿元)
+  shares: 44,           // 总股本(亿股)
+  updateDate: '2026-04-13',
+
+  // 对标信息（用于相对估值对比）
+  peers: [
+    { name: '比亚迪', code: '002594.SZ', pe: 38.5 },
+    { name: '中创新航', code: '3931.HK', pe: 18.2 },
+    { name: '国轩高科', code: '002074.SZ', pe: 52.3 },
+  ],
+  industryAvgPe: 42,
+};
+
+// ================================================================
+//  === 历史PE Band 数据（月度）===
+//  【小白看这里】这是PE Band图表的核心数据
+//  格式：[日期字符串, PE_TTM数值]
+//  数据来源：Tushare daily_basic 接口
+//  更新方式：每月取最后一个交易日的 pe_ttm
+// ================================================================
+var PE_BAND_DATA = {
+  dates: ['2018-07','2018-08','2018-09','2018-10','2018-11','2018-12',
+          '2019-01','2019-02','2019-03','2019-04','2019-05','2019-06','2019-07','2019-08','2019-09','2019-10','2019-11','2019-12',
+          '2020-01','2020-02','2020-03','2020-04','2020-05','2020-06','2020-07','2020-08','2020-09','2020-10','2020-11','2020-12',
+          '2021-01','2021-02','2021-03','2021-04','2021-05','2021-06','2021-07','2021-08','2021-09','2021-10','2021-11','2021-12',
+          '2022-01','2022-02','2022-03','2022-04','2022-05','2022-06','2022-07','2022-08','2022-09','2022-10','2022-11','2022-12',
+          '2023-01','2023-02','2023-03','2023-04','2023-05','2023-06','2023-07','2023-08','2023-09','2023-10','2023-11','2023-12',
+          '2024-01','2024-02','2024-03','2024-04','2024-05','2024-06','2024-07','2024-08','2024-09','2024-10','2024-11','2024-12',
+          '2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12',
+          '2026-01','2026-02','2026-03','2026-04'],
+  values: [45.2,41.8,39.5,37.2,33.8,29.4,
+           32.5,36.8,42.1,38.5,35.2,29.8,34.5,43.2,48.1,42.3,38.7,33.5,
+           54.2,58.5,72.3,85.6,72.1,95.2,112.5,98.3,82.5,73.2,58.4,89.2,
+           162.5,195.3,178.5,145.2,118.5,138.5,156.2,142.3,128.5,105.2,88.5,132.5,
+           125.3,108.5,95.2,82.3,72.5,65.3,58.2,52.5,48.3,42.1,35.2,28.5,
+           32.5,28.3,25.8,23.5,21.2,20.5,22.3,24.5,23.8,22.1,24.5,26.3,
+           20.5,19.2,21.5,23.8,25.2,22.5,20.3,21.8,23.5,25.2,28.5,26.8,
+           24.5,23.2,22.8,24.5,26.3,28.2,27.5,26.8,25.5,24.2,23.8,25.5,
+           24.8,26.3,26.5,26.3],
+
+  // 行业对比PE（同时间段）
+  industryPe: [38.2,36.5,35.8,34.2,32.1,30.5,
+               31.2,34.5,38.2,35.8,33.2,29.5,32.5,38.5,42.1,37.5,34.2,30.8,
+               48.5,52.3,62.5,72.8,62.5,80.5,92.3,82.1,70.5,63.2,52.5,75.2,
+               135.2,162.5,148.5,122.5,102.5,118.5,132.5,120.5,108.5,90.2,76.2,112.5,
+               105.3,92.5,82.5,72.3,64.5,58.3,52.5,48.2,44.5,39.2,33.5,27.2,
+               30.2,26.5,24.2,22.3,20.5,19.8,21.3,23.2,22.5,21.2,23.5,25.3,
+               19.5,18.5,20.5,22.3,23.5,21.2,19.5,20.8,22.5,24.2,27.2,25.8,
+               22.5,21.5,21.2,22.8,24.5,26.2,25.5,24.8,23.5,22.5,22.0,23.5,
+               23.0,24.5,24.8,24.2],
+};
+
+
+// ================================================================
+//  === KPI数据 ===
+//  【小白看这里】5个核心指标的当前值和状态阈值
+// ================================================================
+var KPI_DATA = [
+  { label: 'PE(TTM)', value: 26.3, sub: '市盈率', status: 'warn',
+    desc: '市盈率=股价÷每股收益，衡量市场对公司盈利的定价' },
+  { label: 'ROE', value: '24.91%', sub: '净资产收益率', status: 'good',
+    desc: 'ROE=净利润÷净资产，反映股东资金的赚钱效率，>15%为优秀' },
+  { label: 'FCF收益率', value: '4.97%', sub: 'FCF/MCap', status: 'warn',
+    desc: '自由现金流÷市值，反映现金回报能力，>8%为优秀' },
+  { label: '市占率', value: '39.2%', sub: '全球动力电池', status: 'good',
+    desc: '公司在全球市场的份额，越高说明行业地位越强' },
+  { label: '净现金/市值', value: '20.9%', sub: '安全垫厚度', status: 'good',
+    desc: '(现金-负债)÷市值，比例越高表示抗风险能力越强' },
+];
+
+// ================================================================
+//  === 十分钟测试数据 ===
+//  【小白看这里】晨星9问的自动判断结果
+//  result: 'pass'=通过 / 'fail'=未通过 / 'warn'=需人工确认
+// ================================================================
+var TENMIN_DATA = [
+  { q: '是否持续营业利润？', a: '近6年营业利润全部为正，累计¥3,860亿', r: 'pass' },
+  { q: '是否持续经营现金流？', a: '近6年OCF全部为正，累计¥2,847亿', r: 'pass' },
+  { q: 'ROE > 10% 且杠杆合理？', a: 'ROE=24.91%，资产负债率35%，利息覆盖>20x', r: 'pass' },
+  { q: '盈利增长是否协调？', a: '营收CAGR=51%，净利润CAGR=49%，同步增长✅', r: 'pass' },
+  { q: '资产负债表是否清白？', a: '净现金¥2,530亿，有息负债极低✅', r: 'pass' },
+  { q: '是否产生自由现金流？', a: '5/6年为正，累计¥932亿，仅2019年因扩产为负', r: 'pass' },
+  { q: '"其他"项目是否过多？', a: '非经常损益占比<3%，政府补助占利润约5%', r: 'warn' },
+  { q: '是否存在严重股本稀释？', a: '上市以来股本增长<15%，无明显稀释', r: 'pass' },
+  { q: 'DCF大致估值是否合理？', a: 'Base情景每股公允价值≈¥480，当前¥427', r: 'pass' },
+];
+
+// ================================================================
+//  === 护城河数据 ===
+// ================================================================
+var MOAT_DATA = {
+  steps: [
+    {
+      title: 'Step 1: 历史盈利能力验证',
+      items: [
+        { t: 'FCF/Sales', v: '22.0%', ok: true, d: '>5%为优' },
+        { t: '净利润率', v: '17.0%', ok: true, d: '>15%为优' },
+        { t: 'ROE', v: '24.91%', ok: true, d: '>15%为优' },
+        { t: 'ROIC', v: '18.5%', ok: true, d: '>10%为优' },
+      ],
+      conclusion: '具备产生超额收益的能力'
+    },
+    {
+      title: 'Step 2: 护城河来源识别',
+      items: [
+        { t: '成本优势', v: '规模经济+技术领先', ok: true, d: '规模全球第一，成本低于同行~15%' },
+        { t: '转换成本', v: '中等', w: true, d: '车企切换需重新认证，但非不可替代' },
+        { t: '无形资产', v: '技术品牌', w: true, d: '专利20000+项，但非消费品牌' },
+        { t: '网络效应', v: '弱', ok: false, d: 'B2B业务，无C端网络效应' },
+      ],
+      conclusion: '主要护城河：成本优势(强)+转换成本(中)'
+    },
+    {
+      title: 'Step 3: 护城河宽度评分',
+      score: 3.5, maxScore: 5,
+      scoreLabel: '面窄护城河 (5-10年)',
+      barColor: '#f59e0b',
+      items: [
+        { t: '技术领先可持续性', v: '中等', w: true, d: '研发投入占比>6%，但固态电池可能颠覆' },
+        { t: '客户黏性', v: '较高', ok: true, d: '深度绑定特斯拉、宝马、奔驰等头部车企' },
+        { t: '进入壁垒', v: '高', ok: true, d: '资本密集型+技术壁垒+客户认证周期长' },
+      ],
+    },
+    {
+      title: 'Step 4: 行业竞争结构',
+      items: [
+        { t: 'CR5集中度', v: '~75%+', ok: true, d: 'Top5占据大部分市场' },
+        { t: '进入壁垒', v: '极高', ok: true, d: '资本+技术+客户三重壁垒' },
+        { t: '替代品威胁', v: '中等', w: true, d: '氢燃料/钠电池远期威胁' },
+        { t: '供应商议价力', v: '弱', ok: true, d: '上游锂矿分散，CATL采购规模大' },
+      ],
+      conclusion: '寡头格局稳固，CR5高度集中'
+    },
+    {
+      title: 'Step 5: 侵蚀风险评估',
+      items: [
+        { t: '技术颠覆风险', v: '中等', w: true, d: '固态电池商业化可能改变竞争格局' },
+        { t: '政策/地缘风险', v: '存在', w: true, d: '欧美IRA/电池法案影响出口' },
+        { t: '竞争加剧', v: '比亚迪自供', w: true, d: '大客户比亚迪逐步自产电池' },
+        { t: '下游压价', v: '存在', w: true, d: '车企降本压力传导至电池环节' },
+      ],
+      conclusion: '主要风险：技术迭代+地缘政治+客户垂直整合'
+    },
+  ]
+};
+
+// ================================================================
+//  === 财务健康雷达数据 ===
+//  【小白看这里】六维体检得分，满分5分
+// ================================================================
+var HEALTH_RADAR = {
+  labels: ['现金流质量','盈利能力','负债安全性','资产效率','成长质量','流动性'],
+  data: [4.5, 4.5, 5.0, 4.0, 4.5, 4.5],
+  details: {
+    '现金流质量': { value: 'OCF/NP=185%', note: '连续6年经营现金流>净利润' },
+    '盈利能力': { value: 'ROIC=18.5%', note: '显著高于WACC(8.9%)，创造超额价值' },
+    '负债安全性': { value: '利息保障倍数>20x', note: '几乎无有息负债，净现金公司' },
+    '资产效率': { value: '周转率0.55次/年', note: '重资产行业正常水平' },
+    '成长质量': { value: '收入&利润同步', note: 'CAGR协调，非靠费用控制虚增' },
+    '流动性': { value: '速动比率1.85', note: '短期偿债能力强' },
+  },
+  dangerSignals: [
+    { item: '应收账款异常', status: 'ok', detail: '应收增速(42%) ≈ 收入增速(45%)，正常' },
+    { item: '存货异常', status: 'ok', detail: '存货增速(38%) < 收入增速(45%)，管理良好' },
+    { item: '商誉占比过高', status: 'ok', detail: '商誉/总资产≈0%，无减值风险' },
+    { item: '非经常性损益', status: 'warn', detail: '政府补助占利润~5%，可接受范围' },
+    { item: '担保/或有负债', status: 'ok', detail: '无明显对外担保或有负债' },
+    { item: '经营现金流造假信号', status: 'ok', detail: 'OCF与净利润匹配，无异常' },
+  ]
+};
+
+// ================================================================
+//  === 管理层数据 ===
+// ================================================================
+var GOV_DATA = [
+  { dim: '资本配置效率', score: 4.0, note: '再投资ROI显著高于资本成本' },
+  { dim: '分红/回购记录', score: 3.5, note: '近年分红率提升，暂无回购' },
+  { dim: '关键人依赖', score: 3.0, note: '创始人曾毓群为核心人物，有继任计划' },
+  { dim: '股权激励对齐', score: 3.5, note: '股权激励覆盖核心团队，但部分条件偏低' },
+  { dim: '关联交易透明度', score: 4.0, note: '关联交易占比低，披露充分' },
+  { dim: 'ESG治理评分', score: 4.0, note: 'ESG评级AA级，行业内领先' },
+];
+
+// ================================================================
+//  === 多维度估值数据 ===
+//  【小白看这里】不同估值方法给出的当前估值水平和历史分位
+// ================================================================
+var VAL_METRICS = [
+  { name: 'PE(TTM)', value: 26.3, pct: 45, low: 18, high: 160, curColor: '#f59e0b' },
+  { name: 'PB', value: 4.2, pct: 38, low: 2.5, high: 25, curColor: '#22c55e' },
+  { name: 'PS', value: 4.6, pct: 42, low: 2.8, high: 18, curColor: '#f59e0b' },
+  { name: 'PCF', value: 18.7, pct: 52, low: 10, high: 85, curColor: '#f59e0b' },
+  { name: 'EV/EBITDA', value: 15.2, pct: 48, low: 8, high: 55, curColor: '#f59e0b' },
+];
+
+// ================================================================
+//  === DCF估值数据（三情景）===
+//  【小白看这里】三种假设下的估值结果
+//  Bear=保守估计 Base=最可能情况 Bull=乐观估计
+// ================================================================
+var DCF_SCENARIOS = {
+  base: {
+    name: '中性 Base', emoji: '📊',
+    cagr: '12.5%', tg: '2.5%', wacc: '8.9%',
+    rows: [
+      ['预测期(5年)', '', '', '', '', ''],
+      ['年份', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5'],
+      ['营业收入(亿)', '5,150', '5,794', '6,518', '7,333', '8,249'],
+      ['EBIT(亿)', '927', '1,043', '1,173', '1,320', '1,485'],
+      ['税后NOPAT(亿)', '797', '896', '1,007', '1,133', '1,274'],
+      ['(+折旧-资本支出)(亿)', '-235', '-264', '-297', '-334', '-375'],
+      ['(-营运资本增量)(亿)', '-103', '-117', '-131', '-148', '-166'],
+      ['自由现金流FCF(亿)', '459', '515', '579', '651', '733'],
+      ['', '', '', '', '', ''],
+      ['终值计算', '', '', '', '', ''],
+      ['永续增长率 g', '2.5%', '', '', '', ''],
+      ['终值 TV(亿)', '17,567', '', '', '', ''],
+      ['终值/EV占比', '67%', '', '', '', ''],
+      ['', '', '', '', '', ''],
+      ['估值结果', '', '', '', ''],
+      ['企业价值 EV(亿)', '18,460', '', '', '', ''],
+      ['(-)净债务(亿)', '-2,530', '', '', '', ''],
+      ['股权价值(亿)', '15,930', '', '', '', ''],
+      ['(/)总股本(亿股)', '44', '', '', '', ''],
+      ['每股公允价值', '¥362', '', '', '', ''],
+      ['下行空间', '-15.2%', '', '', '', ''],
+    ],
+    tvChecks: [
+      { label: '终值/EV占比', value: '64%', ok: false, warnText: '偏高（理想<60%）' },
+      { label: '永续增长率 vs Rf', value: '2.0% < 3.0%', ok: true },
+      { label: '隐含Terminal PE', value: '24x', ok: true },
+      { label: 'vs 相对估值偏差', value: '<20%', ok: true },
+    ]
+  },
+  bull: {
+    name: '乐观 Bull', emoji: '🐂',
+    cagr: '16.0%', tg: '3.0%', wacc: '8.5%',
+    rows: [
+      ['预测期(5年)', '', '', '', '', ''],
+      ['年份', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5'],
+      ['营业收入(亿)', '5,786', '6,712', '7,786', '9,031', '10,476'],
+      ['EBIT(亿)', '1,097', '1,273', '1,478', '1,717', '1,995'],
+      ['税后NOPAT(亿)', '943', '1,094', '1,269', '1,473', '1,712'],
+      ['(+折旧-资本支出)(亿)', '-245', '-285', '-330', '-383', '-444'],
+      ['(-营运资本增量)(亿)', '-116', '-135', '-156', '-181', '-210'],
+      ['自由现金流FCF(亿)', '582', '674', '783', '909', '1,058'],
+      ['', '', '', '', '', ''],
+      ['终值计算', '', '', '', '', ''],
+      ['永续增长率 g', '3.0%', '', '', '', ''],
+      ['终值 TV(亿)', '27,840', '', '', '', ''],
+      ['终值/EV占比', '70%', '', '', '', ''],
+      ['', '', '', '', '', ''],
+      ['估值结果', '', '', '', '', ''],
+      ['企业价值 EV(亿)', '39,810', '', '', '', ''],
+      ['(-)净债务(亿)', '-2,530', '', '', '', ''],
+      ['股权价值(亿)', '37,280', '', '', '', ''],
+      ['(/)总股本(亿股)', '44', '', '', '', ''],
+      ['每股公允价值', '¥847', '', '', '', ''],
+      ['上行空间', '+98.4%', '', '', '', ''],
+    ],
+    tvChecks: [
+      { label: '终值/EV占比', value: '70%', ok: false, warnText: '偏高（理想<60%）⚠️' },
+      { label: '永续增长率 vs Rf', value: '3.0% ≈ Rf', ok: true },
+      { label: '隐含Terminal PE', value: '48x', ok: false, warnText: '偏高，依赖高增长假设' },
+      { label: 'vs 相对估值偏差', value: '>25%', ok: false, warnText: '乐观情景偏差较大' },
+    ]
+  }
+};
+
+var WACC_DATA = {
+  rf:'3.0%', erp:'6.5%', beta:1.08,
+  ke:'10.02%', kd_before:'3.2%', tax_rate:'15%',
+  kd_after:'2.72%', wd:'0%', we:'100%', wacc:'8.92%'
+};
+
+var HIST_FIN_DATA = {
+  years:['2019','2020','2021','2022','2023','2024'],
+  revenue:[458,738,1306,3286,4009,4237],
+  ebit:[48,95,178,436,557,722],
+  netProfit:[46,56,159,307,441,512],
+  ocf:[49,73,299,466,691,1332],
+  fcf:[-77,33,120,312,509,932],
+  totalAssets:[1063,1546,2571,4886,6544,7209],
+  netDebt:[-97,-123,-458,-1023,-1570,-2530]
+};
+
+var FORECAST_DATA = {
+  years:['Y1(2025E)','Y2(2026E)','Y3(2027E)','Y4(2028E)','Y5(2029E)'],
+  bearRev:[4576,4942,5337,5764,6225], baseRev:[5150,5794,6518,7333,8249],
+  bullRev:[5786,6712,7786,9031,10476], baseFcf:[459,515,579,651,733]
+};
+
+var SIGNAL_DATA = [
+  {dim:'估值水平',val:'PE=26.3x P45',dot:'amber',text:'合理偏上'},
+  {dim:'盈利能力',val:'ROE=24.91%',dot:'green',text:'优秀'},
+  {dim:'成长性',val:'营收CAGR≈51%',dot:'green',text:'高速增长'},
+  {dim:'现金质量',val:'OCF/NP=185%',dot:'green',text:'优秀'},
+  {dim:'安全性',val:'净现金¥2,530亿',dot:'green',text:'极安全'},
+  {dim:'护城河',val:'评分3.5/5 窄护城河',dot:'amber',text:'面窄但存在'}
+];
+
+var DECISION_DATA = {
+  marginOfSafety:-12.5, requiredMargin:30, fairValue:539, currentPrice:427, moatScore:3.5,
+  scoreCard:[
+    {dim:'护城河强度',weight:'25%',score:3.5,weighted:0.875},
+    {dim:'财务健康度',weight:'20%',score:4.5,weighted:0.900},
+    {dim:'成长性',weight:'15%',score:4.0,weighted:0.600},
+    {dim:'盈利能力',weight:'15%',score:4.5,weighted:0.675},
+    {dim:'管理层质量',weight:'15%',score:3.5,weighted:0.525},
+    {dim:'估值吸引力',weight:'10%',score:3.0,weighted:0.300}
+  ], totalScore:3.88
+};
+
+/* ============================================================
+ *                    渲染引擎 — 不要修改以下部分
+ *  把上面数据区的数据渲染成页面元素
+ * ============================================================ */
+
+function init(){
+  renderKPI(); renderTenMin(); renderMoat(); renderHealthRadar();
+  renderGov(); renderPEBand(); renderValMetrics(); renderDCFTables();
+  renderWACCBreakdown(); renderHeatMaps(); renderDCFEcharts();
+  renderRelativeVal(); renderDecisionPanel(); renderSignals();
+  renderHistFinTable(); renderForecastTable(); renderChartJsCharts();
+}
+
+/* L1 KPI */
+function renderKPI(){document.getElementById('kpiGrid').innerHTML=KPI_DATA.map(function(k){return'<div class="kpi-card '+k.status+'"><div class="label">'+k.label+'</div><div class="value">'+k.value+'</div><div class="sub">'+k.sub+'</div></div>';}).join('');}
+
+/* L2 十分钟测试 */
+function renderTenMin(){
+  var pc=TENMIN_DATA.filter(function(t){return t.r==='pass';}).length,tc=TENMIN_DATA.length,pct=Math.round(pc/tc*100);
+  var v=pct>=85?{t:'✅ 优秀！强烈建议深入研究',c:'#22c55e',b:'rgba(34,197,94,.15)'}:pct>=67?{t:'👍 良好，值得进一步分析',c:'#4ade80',b:'rgba(74,222,128,.12)'}:pct>=50?{t:'🤔 一般，需谨慎评估',c:'#f59e0b',b:'rgba(245,158,11,.12)'}:{t:'❌ 较差，建议排除',c:'#ef4444',b:'rgba(239,68,68,.12)'};
+  document.getElementById('tenminList').innerHTML=TENMIN_DATA.map(function(t){
+    return'<li class="tenmin-item"><span class="tenmin-num '+t.r+'">'+(t.r==='pass'?'\u2713':t.r==='warn'?'!':'\u2717')+'</span><div class="tenmin-text"><div class="tenmin-q">'+t.q+'</div><div class="tenmin-a">'+t.a+'</div></div><span class="tenmin-result" style="color:'+(t.r==='pass'?'#22c55e':t.r==='warn'?'#f59e0b':'#ef4444')+'">'+(t.r==='pass'?'通过':t.r==='warn'?'需确认':'未通过')+'</span></li>';
+  }).join('');
+  document.getElementById('tenminSummaryBox').innerHTML='<div style="font-size:.85em;color:#8b92a5;margin-bottom:6px;">通过率 / 总计</div><div class="tenmin-big-score" style="color:'+v.c+'">'+pc+'/'+tc+'</div><div style="font-size:.82em;color:#8b92a5;margin-top:4px;">'+pct+'%</div><div class="tenmin-verdict" style="background:'+v.b+';color:'+v.c+'">'+v.t+'</div>';
+}
+
+/* L3a 护城河 */
+function renderMoat(){
+  document.getElementById('moatGrid').innerHTML=MOAT_DATA.steps.map(function(s){
+    var ih=s.items?s.items.map(function(i){var c=i.ok?'pass':i.w?'warn':'fail';
+      return '<div class="moat-item"><span class="moat-check '+c+'">'+(i.ok?'\u2713':i.w?'!':'\u2717')+'</span><span><b>'+i.t+'</b>: <span style="color:#e8eaed">'+i.v+'</span> <span style="font-size:.8em;color:#8b92a5">'+(i.d||'')+'</span></span></div>';
+    }).join(''):'';
+    var ch=s.conclusion? '<div style="margin-top:8px;padding:6px10px;background:rgba(99,102,241,.06);border-radius:8px;font-size:.84em;color:#c7d2fe;">📝 '+s.conclusion+'</div>':'';
+    var sh=s.score!==undefined? '<div style="margin-top:10px;"><div class="moat-bar"><div class="moat-bar-fill" style="width:'+(s.score/s.maxScore*100)+'%;background:'+s.barColor+'"></div></div><span class="moat-score-badge" style="background:rgba('+hexToRgb(s.barColor)+',.15);color:'+s.barColor+'">'+s.score+'/'+s.maxScore+' \u2014 '+s.scoreLabel+'</span></div>' :'';
+    return'<div class="moat-step"><h4>'+s.title+'</div>'+ih+sh+ch+'</div>';
+  }).join('');
+}
+function hexToRgb(h){if(h.charAt(0)==='#')h=h.slice(1);if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];return parseInt(h.slice(0,2),16)+','+parseInt(h.slice(2,4),16)+','+parseInt(h.slice(4),6);}
+
+/* L3b 健康雷达 */
+function renderHealthRadar(){
+  new Chart(document.getElementById('healthRadar'),{type:'radar',
+    data:{labels:HEALTH_RADAR.labels,datasets:[{label:'健康得分',data:HEALTH_RADAR.data,backgroundColor:'rgba(99,102,241,.15)',borderColor:'#6366f1',borderWidth:2,pointBackgroundColor:'#6366f1',pointRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{r:{beginAtZero:true,max:5,ticks:{stepSize:1,color:'#8b92a5',backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.05)'},pointLabels:{color:'#8b92a5',font:{size:11}}}},plugins:{legend:{display:false}}}});
+  document.getElementById('dangerSignals').innerHTML='<h5 style="margin-bottom:8px;">⚠️ 六大危险信号检查</h5>'+HEALTH_RADAR.dangerSignals.map(function(d){return'<div style="display:flex;align-items:center;gap:8px;padding:3px0;"><span>'+(d.status==='ok'?'\u2705':'\u26A0\uFE0F')+'</span><span style="flex:1">'+d.item+'</span><span style="color:'+(d.status==='ok'?'#22c55e':'#f59e0b')+';font-size:.82em">'+d.detail+'</span></div>';}).join('');
+}
+
+/* L3c 治理 */
+function renderGov(){
+  var a=GOV_DATA.reduce(function(s,g){return s+g.score;},0)/GOV_DATA.length;
+  document.getElementById('govList').innerHTML=GOV_DATA.map(function(g){var c=g.score>=4?'#22c55e':g.score>=3?'#f59e0b':'#ef4444';return'<li class="gov-item"><span class="g-label">'+g.dim+'</span><div class="g-bar"><div class="g-bar-fill" style="width:'+(g.score/5*100)+'%;background:'+c+'"></div></div><span class="g-score" style="color:'+c+'">'+g.score+'/5</span></li>';}).join('');
+  var v=a>=4?{t:'优秀',c:'#22c55e'}:a>=3.5?{t:'良好',c:'#4ade80'}:{t:'一般',c:'#f59e0b'};
+  document.getElementById('govSummary').innerHTML='综合评分 <b style="color:'+v.c+';font-size:1.2em">'+a.toFixed(1)+'</b>/5 \u2014 '+v.t;
+}
+
+/* L4a PE Band ★核心模块★ */
+function renderPEBand(){
+  var d=PE_BAND_DATA.dates,v=PE_BAND_DATA.values,ip=PE_BAND_DATA.industryPe;
+  var m=v.reduce(function(a,b){return a+b;},0)/v.length;
+  var sd=Math.sqrt(v.reduce(function(a,b){return a+(b-m)*(b-m);},0)/v.length);
+  var p1=m+sd,m1=m-sd,cp=v[v.length-1];
+  var st=v.slice().sort(function(a,b){return a-b;});
+  var pct=Math.round(st.filter(function(x){return x<cp;}).length/st.length*100);
+  var zi=pct<=20?{z:'深度价值区 🟢',bg:'rgba(34,197,94,.15)',bd:'#22c55e',c:'#22c55e'}
+    :pct<=40?{z:'低估区间 🟢',bg:'rgba(74,222,128,.12)',bd:'#4ade80',c:'#4ade80'}
+    :pct<=60?{z:'合理区间 🟡',bg:'rgba(245,158,11,.12)',bd:'#f59e0b',c:'#f59e0b'}
+    :pct<=80?{z:'偏高区间 🟡',bg:'rgba(251,146,60,.12)',bd:'#fb923c',c:'#fb923c'}
+    :{z:'高估区间 🔴',bg:'rgba(239,68,68,.15)',bd:'#ef4444',c:'#ef4444'};
+  var df=((cp-m)/m*100).toFixed(1),dc=cp<=m?'#22c55e':'#ef4444';
+
+  var chart=echarts.init(document.getElementById('peBandChart'));
+  chart.setOption({
+    tooltip:{trigger:'axis',formatter:function(p){var i=p[0].dataIndex;
+      return '<b>'+d[i]+'</b><br/>PE(TTM): <b>'+v[i].toFixed(1)+'x</b><br/>行业平均: <b style="color:#fb923c">'+ip[i].toFixed(1)+'x</b><br/>'+(i===v.length-1?'<hr style="border-color:#333;margin:6px0">历史分位: <b>P'+pct+'</b><br/>距均值: <b style="color:'+dc+'">'+df+'%</b>':'');}},
+    grid:{top:40,right:85,bottom:30,left:50},
+    xAxis:{type:'category',data:d,axisLabel:{interval:12,fontSize:10,color:'#8b92a5'},axisLine:{lineStyle:{color:'#333'}},axisTick:{show:false}},
+    yAxis:{type:'value',name:'PE(TTM)',nameTextStyle:{color:'#8b92a5'},min:function(v){return Math.floor(Math.min(m-2*sd,v.min)*0.9);},max:function(v){return Math.ceil(Math.max(m+2*sd,v.max)*1.05);},splitLine:{lineStyle:{color:'rgba(255,255,255,.04)'}},axisLabel:{formatter:'{value}',color:'#8b92a5'}},
+    series:[
+      {type:'line',data:Array(d.length).fill(m+2*sd),lineStyle:{opacity:0},areaStyle:{color:'rgba(150,150,150,.03)'},symbol:'none',silent:true,zlevel:0},
+      {type:'line',data:Array(d.length).fill(m-2*sd),lineStyle:{opacity:0},areaStyle:{color:'rgba(150,150,150,.01)'},symbol:'none',silent:true,zlevel:0},
+      {type:'line',data:Array(d.length).fill(p1),lineStyle:{opacity:0},areaStyle:{color:'rgba(99,102,241,.04)'},symbol:'none',silent:true,zlevel:1},
+      {type:'line',data:Array(d.length).fill(m),lineStyle:{color:'#f59e0b',type:'dashed',width:1.2},symbol:'none',name:'N年均值('+m.toFixed(1)+'x)',silent:true,zlevel:1},
+      {type:'line',data:Array(d.length).fill(p1),lineStyle:{color:'#60a5fa',type:'dotted',width:1},symbol:'none',silent:true,zlevel:1},
+      {type:'line',data:Array(d.length).fill(m1),lineStyle:{color:'#60a5fa',type:'dotted',width:1},symbol:'none',silent:true,zlevel:1},
+      {type:'line',data:v,lineStyle:{color:'#fff',width:2.2},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(99,102,241,.2)'},{offset:1,color:'rgba(99,102,241,.02)'}])},symbol:'none',name:'PE(TTM)',zlevel:2},
+      {type:'line',data:ip,lineStyle:{color:'#fb923c',width:1.3,type:[5,5]},symbol:'none',name:'行业平均PE',zlevel:2},
+      {type:'effectScatter',data:[{value:[d.length-1,cp]}],symbolSize:14,itemStyle:{color:zi.c,shadowBlur:10,shadowColor:zi.c},showEffectOn:'render',rippleEffect:{brushType:'stroke',scale:3,color:zi.c},tooltip:{show:false},zlevel:10}
+    ],
+    markLine:{silent:true,data:[
+      {yAxis:m1,label:{formatter:'-1σ 机会线 ('+m1.toFixed(1)+'x)',position:'insideEndBottom',fontSize:10,color:'#22c55e'},lineStyle:{color:'rgba(34,197,94,.5)',type:'dashed'}},
+      {yAxis:p1,label:{formatter:'+1σ 警戒线 ('+p1.toFixed(1)+')',position:'insideStartTop',fontSize:10,color:'#ef4444'},lineStyle:{color:'rgba(239,68,68,.5)',type:'dashed'}}
+    ]},
+    graphic:[
+      {right:6,top:6,type:'text',style:{text:'📊 PE Band 分析',fontSize:13,fontWeight:'bold',fill:'#e8eaed'}},
+      {right:6,top:28,type:'text',style:{text:'当前 PE:',fontSize:11,fill:'#8b92a5'}},
+      {right:6,top:46,type:'text',style:{text:cp.toFixed(1)+'x',fontSize:22,fontWeight:'bold',fill:zi.c}},
+      {right:6,top:74,type:'text',style:{text:'历史分位: P'+pct,fontSize:12,fill:zi.c}},
+      {right:6,top:94,type:'text',style:{text:m.toFixed(1)+'x 均值',fontSize:11,fill:'#94a3b8'}},
+      {right:6,top:112,type:'text',style:{text:'距均值: '+df+'%',fontSize:11,fill:dc}},
+      {right:6,top:136,type:'rect',shape:{width:72,height:22,r:4},style:{fill:zi.bg}},
+      {right:6,top:139,type:'text',style:{text:zi.z,fontSize:10.5,fill:zi.c,fontWeight:600}}
+    ]
+  });
+  window.addEventListener('resize',function(){chart.resize();});
+
+  // 右侧面板
+  document.getElementById('peSidePanel').innerHTML=
+    '<div style="font-weight:700;font-size:1em;margin-bottom:12px;">📊 定位数据</div>'+
+    '<div class="pe-stat-row"><span class="pe-stat-label">当前 PE(TTM)</span><span class="pe-stat-value" style="color:'+zi.c+';font-size:1.1em">'+cp.toFixed(1)+'x</span></div>'+
+    '<div class="pe-stat-row"><span class="pe-stat-label">历史分位</span><span class="pe-stat-value" style="color:'+zi.c+'">P'+pct+'</span></div>'+
+    '<div class="pe-stat-row"><span class="pe-stat-label">N年均值</span><span class="pe-stat-value">'+m.toFixed(1)+'x</span></div>'+
+    '<div class="pe-stat-row"><span class="pe-stat-label">标准差 σ</span><span class="pe-stat-value">±'+sd.toFixed(1)+'x</span></div>'+
+    '<div class="pe-stat-row"><span class="pe-stat-label">+1σ 警戒线</span><span class="pe-stat-value" style="color:#ef4444">'+p1.toFixed(1)+'x</span></div>'+
+    '<div class="pe-stat-row"><span class="pe-stat-label">-1σ 机会线</span><span class="pe-stat-value" style="color:#22c55e">'+m1.toFixed(1)+'x</span></div>'+
+    '<div class="pe-stat-row"><span class="pe-stat-label">距均值</span><span class="pe-stat-value" style="color:'+dc+'">'+df+'%</span></div>'+
+    '<div class="pe-stat-row"><span class="pe-stat-label">行业平均PE</span><span class="pe-stat-value" style="color:#fb923c">'+ip[ip.length-1].toFixed(1)+'x</span></div>'+
+    '<div class="pe-zone-tag" style="background:'+zi.bg+';color:'+zi.c+';border:1px solid '+zi.bd+'">'+zi.z+'</div>';
+}
+
+/* L4b 多维度分位对比 */
+function renderValMetrics(){
+  document.getElementById('valMetricsPanel').innerHTML=VAL_METRICS.map(function(m){
+    var bc=m.pct<=40?'#22c55e':m.pct<=60?'#f59e0b':'#ef4444';
+    return '<div class="val-metric-row"><span class="val-m-name">'+m.name+'</span><span class="val-m-value" style="color:'+m.curColor+'">'+m.value+'</span><div class="val-m-pct"><div class="val-m-bar"><div class="val-m-bar-fill" style="width:'+m.pct+'%;background:'+bc+'"></div></div></div><span class="val-m-pct-label">P'+m.pct+'</span></div>';
+  }).join('');
+}
+
+/* L5 DCF表格+终值校验+WACC+热力图+柱状图 */
+function renderDCFTables(){
+  function bt(sc){var dc=DCF_SCENARIOS[sc];
+    return dc.rows.map(function(r,i){
+      if(i<=1||r[0]==='预测期'||r[0]==='终值计算'||r[0]==='估值结果')
+        return '<tr><th colspan="6" style="text-align:left;background:rgba(99,102,241,.08);padding:8px10px;">'+r[0]+'</th></tr>';
+      var bl=r[0]==='每股公允价值'||r[0]==='上行空间'||r[0]==='下行空间';
+      return '<tr>'+r.map(function(c,j){return '<td class="'+(j===0?'':bl?'highlight num':'num')+'">'+c+'</td>';}).join('')+'</tr>';
+    }).join('');
+  }
+  document.getElementById('dcfTableBase').innerHTML='<tbody>'+bt('base')+'</tbody>';
+  document.getElementById('dcfTableBear').innerHTML='<tbody>'+bt('bear')+'</tbody>';
+  document.getElementById('dcfTableBull').innerHTML='<tbody>'+bt('bull')+'</tbody>';
+
+  function tvp(sc){var t=DCF_SCENARIOS[sc];
+    return '<h4>🔍 终值合理性校验</h4>'+t.tvChecks.map(function(c){
+      return '<div class="tv-check"><span class="'+(c.ok?'ok':'warn')+'">'+(c.ok?'✅':'⚠️')+'</span><span style="flex:1">'+c.label+': <b>'+c.value+'</b></span>'+(c.warnText?'<span style="color:#f59e0b;font-size:.82em">'+c.warnText+'</span>':'')+'</div>';
+    }).join('');}
+  document.getElementById('tvPanelBase').innerHTML=tvp('base');
+  document.getElementById('tvPanelBear').innerHTML=tvp('bear');
+  document.getElementById('tvfPanelBull').innerHTML=tvp('bull');
+
+  document.querySelectorAll('#dcfTabs .tab-btn').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('#dcfTabs .tab-btn').forEach(function(x){x.classList.remove('active');});
+      document.querySelectorAll('.tab-content').forEach(function(x){x.classList.remove('active');});
+      this.classList.add('active');
+      document.getElementById('tab-'+this.dataset.tab).classList.add('active');
+    });
+  });
+}
+
+function renderWACCBreakdown(){
+  var w=WACC_DATA;
+  document.getElementById('waccBreakdown').innerHTML=
+    '<div class="wacc-row"><span>Rf 无风险利率</span><span style="font-weight:600">'+w.rf+'</span></div>'+
+    '<div class="wacc-row"><span>股权风险溢价 ERP</span><span style="font-weight:600">'+w.erp+'</span></div>'+
+    '<div class="wacc-row"><span>Beta β系数</span><span style="font-weight:600">'+w.beta+'</span></div>'+
+    '<div class="wacc-row" style="border-bottom:2px solid rgba(99,102,246,.3);margin:4px0;padding-bottom:6px;"><span><b>Ke 股权成本 = Rf + β×ERP</b></span><span style="font-weight:700;color:#6366f1">'+w.ke+'</span></div>'+
+    '<div class="wacc-row"><span>Kd(税前)债务成本</span><span>'+w.kd_before+'</span></div>'+
+    '<div class="wacc-row"><span>有效税率 T</span><span>'+w.tax_rate+'</span></div>'+
+    '<div class="wacc-row"><span>Kd(税后) = Kd×(1-T)</span><span style="font-weight:600">'+w.kd_after+'</span></div>'+
+    '<div class="wacc-row"><span>债务权重 Wd</span><span>'+w.wd+'</span></div>'+
+    '<div class="wacc-row"><span>股权权重 We</span><span>'+w.we+'</span></div>'+
+    '<div class="wacc-row" style="border:none;margin-top:6px;padding-top:6px;background:rgba(99,102,241,.08);border-radius:6px;padding:8px;"><span><b>WACC = Wd×Kd + We×Ke</b></span><span style="font-weight:800;font-size:1.1em;color:#6366f1">'+w.wacc+'</span></div>';
+}
+
+function makeHeatMap(id,rn,rv,cn,cv,fn){
+  var ch=echarts.init(document.getElementById(id)),da=[];
+  for(var i=0;i<rv.length;i++)for(var j=0;j<cv.length;j++)da.push([i,j,fn(rv[i],cv[j])]);
+  ch.setOption({tooltip:{position:'top',
+    formatter:function(p){return rn+': '+rv[p.data[0]]+'%<br/>'+cn+': '+cv[p.data[1]]+'%<br/>EV: <b>'+p.data[2]+'亿</b>';}},
+    grid:{top:10,right:80,bottom:50,left:70},
+    xAxis:{type:'category',data:cv.map(function(x){return x+'%';}),name:cn,nameLocation:'middle',nameGap:22,nameTextStyle:{color:'#8b92a5'},axisLabel:{fontSize:10,color:'#8b92a5'}},
+    yAxis:{type:'category',data:rv.map(function(x){return x+'%';}),name:rn,nameLocation:'middle',nameGap:50,nameTextStyle:{color:'#8b92a5'},axisLabel:{fontSize:10,color:'#8b92a5'},inverse:true},
+    visualMap:{min:15000,max:35000,calculable:true,orient:'horizontal',left:'center',bottom:0,textStyle:{color:'#8b92a5'},inRange:{color:['#22c55e','#84cc16','#f59e0b','#fb923c','#ef4444']}},
+    series:[{type:'heatmap',data:da,label:{show:true,formatter:function(p){return p.data[2]>=10000?(p.data[2]/10000).toFixed(1)+'万':'';},fontSize:11},itemStyle:{borderWidth:1,borderColor:'#1a1d27',borderRadius:2}}]});
+  window.addEventListener('resize',function(){ch.resize();});}
+
+function renderHeatMaps(){
+  makeHeatMap('heatMapWaccG','WACC',[7.5,8,8.5,9,9.5,10,10.5],'g',[1.5,2,2.5,3,3.5,4],function(w,g){return Math.round(5000*(Math.pow(1.125,5)-1)/(w-g)*100)/100;});
+  makeHeatMap('heatMapCagrG','营收CAGR',[8,10,12,14,16,18,20],'g',[1.5,2,2.5,3,3.5],function(c,g){return Math.round(450*Math.pow(1+c/100,5)/(0.089-g)*100)/100;});
+}
+
+function renderDCFEcharts(){
+  var ch=echarts.init(document.getElementById('dcfScenarioChart'));
+  ch.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'},
+    formatter:function(p){var i=p[0].dataIndex,n=['🐻悲观 Bear','📊中性 Base','🐂乐观 Bull'],ev=[18460,26246,39810],ps=[362,539,847],sp=['-15.2%','+26.2%','+98.4%'];
+      return'<b>'+n[i]+'</b><br/>企业价值: <b>'+ev[i]+'</b>万亿<br/>每股公允价: <b>&yen;'+ps[i]+'</b><br/>上/下行空间: <b style="color:'+(sp[i][0]=='-'?'#ef4444':'#22c55e')+'">'+sp[i]+'</b>';}},
+    grid:{top:30,right:20,bottom:40,left:50},
+    xAxis:{type:'category',data:['Bear\n悲观','Base\n中性','Bull\n乐观'],axisLabel:{color:'#8b92a5',fontSize:11}},
+    yAxis:{type:'value',name:'亿元',nameTextStyle:{color:'#8b92a5'},splitLine:{lineStyle:{color:'rgba(255,255,255,.04)'}},axisLabel:{color:'#8b92a5'}},
+    series:[{type:'bar',data:[
+      {value:18460,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#ef4444'},{offset:1,color:'#991b1b'}])}},
+      {value:26246,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#6366f1'},{offset:1,color:'#4338ca'}])}},
+      {value:39810,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#22c55e'},{offset:1,color:'#15803d'}])}}],barWidth:50,
+      label:{show:true,position:'top',formatter:'{c}亿',fontSize:12,color:'#e8eaed'}}],
+    markLine:{silent:true,symbol:'none',data:[{yAxis:18788,label:{formatter:'当前市值 ¥18,788亿',position:'insideEndTop',fontSize:11,color:'#f59e0b',backgroundColor:'rgba(0,0,0,.6)',padding:[3,8],borderRadius:4},lineStyle:{color:'#f59e0b',type:'solid',width:2}}]}}]);
+  window.addEventListener('resize',function(){ch.resize();});}
+
+function renderRelativeVal(){
+  var ch=echarts.init(document.getElementById('relativeValChart'));
+  var da=[{value:26.3,itemStyle:{color:'#6366f1'},name:STOCK.name}];
+  STOCK.peers.forEach(function(p){da.push({value:p.pe,itemStyle:{color:'#60a5fa'},name:p.name});});
+  da.push({value:STOCK.industryAvgPe,itemStyle:{color:'#fb923c'},name:'行业平均'});
+  ch.setOption({tooltip:{trigger:'axis',formatter:function(p){return '<b>'+p[0].name+'</b><br/>PE(TTM): <b>'+p[0].value+'x</b>';}},
+    grid:{top:20,right:120,bottom:20,left:10},xAxis:{type:'value',axisLabel:{show:false},splitLine:{show:false}},
+    yAxis:{type:'category',data:da.map(function(d){return d.name;}),axisLabel:{color:'#e8eaed',fontSize:11},inverse:true},
+    series:[{type:'bar',data:da,barWidth:24,label:{show:true,position:'right',formatter:'{c}x',fontSize:12,color:'#e8eaed'},itemStyle:{color:function(p){return p.data.itemStyle.color;},borderRadius:[0,4,4,0]}}],
+    graphic:[{left:'center',bottom:15,type:'text',style:{text:'PE(TTM) 对比 — 数值越低越便宜',fontSize:10,color:'#555b6b'}}]});
+  window.addEventListener('resize',function(){ch.resize();});}
+
+/* L6 安全边际+评分卡 */
+function renderDecisionPanel(){
+  var d=DECISION_DATA,ms=d.marginOfSafety,rm=d.requiredMargin;
+  var mc, mv,mb;
+  if(ms>=rm){mc='#22c55e';mv='✅ 买入区间 — 好公司+好价格';mb='rgba(34,197,94,.15)';}
+  else if(ms>=0){mc='#f59e0b';mv='🟡 观望 — 好公司但价格一般';mb='rgba(245,158,11,.15)';}
+  else{mc='#ef4444';mv='🔴 高估 — 等待回调';mb='rgba(239,68,68,.15)';}
+  var el=function(id,s){var e=document.getElementById(id);if(e)e.innerHTML=s;};
+  el('marginPct',(ms>=0?'+':'')+ms+'%'); var me=document.getElementById('marginPct');if(me)me.style.color=mc;
+  var mr=document.getElementById('marginRing');if(mr){mr.style.boxShadow='0 0 30px rgba('+hexToRgb(mc.replace('#',''))+',0.3)';mr.style.border='3px solid '+mc;}
+  el('marginVerdict',mv);var mvEl=document.getElementById('marginVerdict');if(mvEl){mvEl.style.background=mb;mvEl.style.color=mc;}
+  el('marginDetails','<div class="margin-detail-row">公允价值(Base): <b style="color:#e8eaed">&yen;'+d.fairValue+'</b></div>'+
+    '<div class="margin-detail-row">当前价格: <b style="color:#e8eaed">&yen;'+d.currentPrice+'</b></div>'+
+    '<div class="margin-detail-row">要求安全边际: ≥'+rm+'%（护城河宽度'+d.moatScore+'/5）</div>');
+
+  var th='<thead><tr><th>评分维度</th><th>权重</th><th>得分</th><th>加权</th><th style="width:80px"></th></tr></thead><tbody>';
+  d.scoreCard.forEach(function(s){var bc=s.score>=4?'#22c55e':s.score>=3?'#f59e0b':'#ef4444';
+    th+='<tr><td>'+s.dim+'</td><td style="color:#8b92a5">'+s.weight+'</td><td class="num" style="color:'+bc+'">'+s.score+'/5</td><td class="num">'+s.weighted.toFixed(3)+'</td>'+
+    '<td><div class="score-bar"><div class="score-bar-fill" style="width:'+(s.score/5*100)+'%;background:'+bc+'"></div></div></td></tr>';});
+  th+='</tbody>';el('scoreTable',th);
+
+  var ts=d.totalScore,tsc,tsv,tsbg;
+  if(ts>=4){tsc='#22c55e';tsv='✅ 买入 — 综合评分优秀+安全边际充分';tsbg='rgba(34,197,94,.12)';}
+  else if(ts>=3.5){tsc='#4ade80';tsv='📌 重点关注 — 优质公司，等待更好价格';tsbg='rgba(74,222,128,.1)';}
+  else if(ts>=3){tsc='#f59e0b';tsv='🟡 观望 — 有研究价值，等机会';tsbg='rgba(245,158,11,.1)';}
+  else{tsc='#ef4444';tsv='❌ 排除 — 不符合价值投资标准';tsbg='rgba(239,68,68,.12)';}
+  el('scoreTotal',ts.toFixed(2)+' / 5.00');var st=document.getElementById('scoreTotal');if(st)st.style.color=tsc;
+  el('scoreVerdict',tsv);var sv=document.getElementById('scoreVerdict');if(sv){sv.style.background=tsbg;sv.style.color=tsc;}
+  el('weightHint','加权方案：护城河25% · 财务健康20% · 成长15%<br>盈利能力15% · 管理层15% · 估值10%');
+}
+
+/* 信号灯 */
+function renderSignals(){
+  document.getElementById('signalGrid').innerHTML=SIGNAL_DATA.map(function(s){
+    return '<div class="signal-item"><span class="signal-dot '+s.dot+'"></span><div class="signal-text">'+s.dim+'</div><span class="signal-val">'+s.val+'</span></div>';
+  }).join('');}
+
+/* L7 附录表格 */
+function renderHistFinTable(){
+  var h=HIST_FINData,y=h.years;
+  document.getElementById('histFinTable').innerHTML='<thead><tr><th>指标</th>'+y.map(function(yr){return'<th>'+yr+'</th>';}).join('')+'</tr></thead><tbody>'+
+    ['营业收入(亿)',h.revenue],['EBIT(亿)',h.ebit],['净利润(亿)',h.netProfit],
+    ['经营现金流(亿)',h.ocf],['自由现金流(亿)',h.fcf],['总资产(亿)',h.totalAssets],['净债务(亿)',h.netDebt]
+  ).map(function(row){return '<tr><td>'+row[0]+'</td>'+row[1].map(function(v){return '<td>'+(typeof v==='number'&&v<0?'<span style="color:#ef4444">'+v+'</span>':v)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody>';
+}
+// Fix: HIST_FIN_DATA typo
+function renderHistFinTable(){
+  var h=HIST_FIN_DATA,y=h.years;
+  document.getElementById('histFinTable').innerHTML='<thead><tr><th>指标</th>'+y.map(function(yr){return'<th>'+yr+'</th>';}).join('')+'</tr></thead><tbody>'+
+  [['营业收入(亿)',h.revenue],['EBIT(亿)',h.ebit],['净利润(亿)',h.netProfit],
+   ['经营现金流(亿)',h.ocf],['自由现金流(亿)',h.fcf],['总资产(亿)',h.totalAssets],['净债务(亿)',h.netDebt]]
+  .map(function(row){return'<tr><td>'+row[0]+'</td>'+row[1].map(function(v){return'<td>'+(typeof v==='number'&&v<0?'<span style="color:#ef4444">'+v+'</span>':v)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody>';}
+
+function renderForecastTable(){
+  var f=FORECAST_DATA,y=f.years;
+  document.getElementById('forecastTable').innerHTML='<thead><tr><th>情景</th>'+y.map(function(yr){return'<th>'+yr+'</th>';}).join('')+'</tr></thead><tbody>'+
+  [['🐻悲观营收',f.bearRev],['📊中性营收',f.baseRev],['🐂乐观营收',f.bullRev],['📊中性FCF',f.baseFcf]]
+  .map(function(row){return '<tr><td>'+row[0]+'</td>'+row[1].map(function(v){return'<td>'+v+'</td>';}).join('')+'</tr>';}).join('')+'</tbody>';
+}
+
+/* Chart.js 辅助图表组 */
+function renderChartJsCharts(){
+  // 营收&利润趋势
+  new Chart(document.getElementById('cjRevProfit'),{type:'bar',
+    data:{labels:HIST_FIN_DATA.years,datasets:[
+      {label:'营业收入(亿)',data:HIST_FIN_DATA.revenue,backgroundColor:'rgba(99,102,241,.6)',borderRadius:4},
+      {label:'净利润(亿)',data:HIST_FIN_DATA.netProfit,backgroundColor:'rgba(34,197,94,.6)',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b92a5'}},x:{grid:{display:false},ticks:{color:'#8b92a5'}}},plugins:{legend:{labels:{color:'#8b92a5'}}}}});
+
+  // 利润率
+  new Chart(document.getElementById('cjMargins'),{type:'line',
+    data:{labels:HIST_FIN_DATA.years,datasets:[
+      {label:'毛利率%',data:[28.6,27.8,26.2,24.5,26.2,26.2],borderColor:'#6366f1',backgroundColor:'transparent',tension:.3},
+      {label:'净利率%',data:[10.0,7.6,12.2,9.3,11.0,12.1],borderColor:'#22c55e',backgroundColor:'transparent',tension:.3}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b92a5'}},x:{grid:{display:false},ticks:{color:'#8b92a5'}}},plugins:{legend:{labels:{color:'#8b92a5'}}}}});
+
+  // FCF
+  new Chart(document.getElementById('cjFcf'),{type:'bar',
+    data:{labels:HIST_FIN_DATA.years,datasets:[{label:'自由现金流(亿)',data:HIST_FIN_DATA.fcf,
+      backgroundColor:function(ctx){var v=ctx.raw;return v<0?'rgba(239,68,68,.6)':'rgba(34,197,94,.6)';},borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b92a5'}},x:{grid:{display:false},ticks:{color:'#8b92a5'}}},plugins:{legend:{labels:{color:'#8b92a5'}}}}});
+
+  // 净现金 & 净现金/市值
+  var ncRatio=HIST_FIN_DATA.netDebt.map(function(n){return(n/STOCK.totalMcap*100).toFixed(1);});
+  new Chart(document.getElementById('cjNetCash'),{type:'line',
+    data:{labels:HIST_FIN_DATA.years,datasets:[
+      {label:'净现金(亿)',data:HIST_FIN_DATA.netDebt.map(function(n){return-Math.abs(n);}),borderColor:'#06b6d4',backgroundColor:'rgba(6,182,212,.1)',fill:true,tension:.3,yAxisID:'y'},
+      {label:'净现金/市值%',data:ncRatio.map(Number),borderColor:'#f59e0b',backgroundColor:'transparent',tension:.3,yAxisID:'y1'}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{
+      y:{position:'left',grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b92a5'}},
+      y1:{position:'right',grid:{display:false},ticks:{color:'#f59e0b'}},
+      x:{grid:{display:false},ticks:{color:'#8b92a5'}}
+    },plugins:{legend:{labels:{color:'#8b92a5'}}}}});
+}
+
+/* 可折叠交互 */
+function toggleCollapse(el){var body=el.nextElementSibling,arr=el.querySelector('.collapsible-arrow');
+  if(body.classList.contains('open')){body.classList.remove('open');arr.classList.remove('open');}
+  else{body.classList.add('open');arr.classList.add('open');}}
+
+/* 页面加载后初始化所有渲染函数 */
+window.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>, ''],
+      ['企业价值 EV(亿)', '26,246', '', '', '', ''],
+      ['(-)净债务(亿)', '-2,530', '', '', '', ''],
+      ['股权价值(亿)', '23,716', '', '', '', ''],
+      ['(/)总股本(亿股)', '44', '', '', '', ''],
+      ['每股公允价值', '¥539', '', '', '', ''],
+      ['上行空间', '+26.2%', '', '', '', ''],
+    ],
+    tvChecks: [
+      { label: '终值/EV占比', value: '67%', ok: false, warnText: '偏高（理想<60%）' },
+      { label: '永续增长率 vs Rf', value: '2.5% < 3.0%', ok: true },
+      { label: '隐含Terminal PE', value: '35x', ok: true, warnText: '高于当前26x，合理' },
+      { label: 'vs 相对估值偏差', value: '<15%', ok: true },
+    ]
+  },
+  bear: {
+    name: '悲观 Bear', emoji: '🐻',
+    cagr: '8.0%', tg: '2.0%', wacc: '9.5%',
+    rows: [
+      ['预测期(5年)', '', '', '', '', ''],
+      ['年份', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5'],
+      ['营业收入(亿)', '4,576', '4,942', '5,337', '5,764', '6,225'],
+      ['EBIT(亿)', '779', '841', '909', '981', '1,059'],
+      ['税后NOPAT(亿)', '669', '723', '781', '843', '909'],
+      ['(+折旧-资本支出)(亿)', '-230', '-249', '-269', '-291', '-315'],
+      ['(-营运资本增量)(亿)', '-91', '-99', '-107', '-115', '-125'],
+      ['自由现金流FCF(亿)', '348', '375', '405', '437', '469'],
+      ['', '', '', '', '', ''],
+      ['终值计算', '', '', '', '', ''],
+      ['永续增长率 g', '2.0%', '', '', '', ''],
+      ['终值 TV(亿)', '10,546', '', '', '', ''],
+      ['终值/EV占比', '64%', '', '', '', ''],
+      ['', '', '', '', '', ''],
+      ['估值结果', '', '', '', '
