@@ -949,11 +949,25 @@ var DECISION_DATA = {
  * ============================================================ */
 
 function init(){
-  renderKPI(); renderTenMin(); renderMoat(); renderHealthRadar();
-  renderGov(); renderPEBand(); renderValMetrics(); renderDCFTables();
-  renderWACCBreakdown(); renderHeatMaps(); renderDCFEcharts();
-  renderRelativeVal(); renderDecisionPanel(); renderSignals();
-  renderHistFinTable(); renderForecastTable(); renderChartJsCharts();
+  var fns=[
+    ['renderKPI',renderKPI],['renderTenMin',renderTenMin],['renderMoat',renderMoat],
+    ['renderHealthRadar',renderHealthRadar],['renderGov',renderGov],['renderPEBand',renderPEBand],
+    ['renderValMetrics',renderValMetrics],['renderDCFTables',renderDCFTables],
+    ['renderWACCBreakdown',renderWACCBreakdown],['renderHeatMaps',renderHeatMaps],
+    ['renderDCFEcharts',renderDCFEcharts],['renderRelativeVal',renderRelativeVal],
+    ['renderDecisionPanel',renderDecisionPanel],['renderSignals',renderSignals],
+    ['renderHistFinTable',renderHistFinTable],['renderForecastTable',renderForecastTable],
+    ['renderChartJsCharts',renderChartJsCharts]
+  ];
+  var errors=[];
+  fns.forEach(function(fn){
+    try{fn[1]();}catch(e){errors.push('❌ '+fn[0]+': '+e.message);console.error(fn[0]+' ERROR:',e);}
+  });
+  if(errors.length>0){
+    console.log('%c⚠️ 渲染错误: '+errors.length+'个模块加载失败','color:#f59e0b;font-size:14px');
+    errors.forEach(function(e){console.log(e);});
+    var el=document.getElementById('kpiGrid');if(el)el.innerHTML='<div style="grid-column:1/-1;padding:20px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:12px;color:#ef4444;"><h3 style="margin-bottom:10px">⚠️ 部分模块加载失败</h3><pre style="font-size:.82em;white-space:pre-wrap;color:#f87171">'+errors.join('\n')+'</pre></div>';
+  }
 }
 
 /* L1 KPI */
